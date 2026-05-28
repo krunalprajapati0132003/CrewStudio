@@ -1,3 +1,32 @@
+```js
+import { initializeApp } from "firebase/app";
+
+import {
+  getAuth,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signOut
+} from "firebase/auth";
+```
+```js
+const firebaseConfig = {
+  apiKey: "AIzaSyBr6WV5kkiyfLNvPrZNeigrjmG4NilFAUI",
+  authDomain: "crewstudio-35d88.firebaseapp.com",
+  projectId: "crewstudio-35d88",
+  storageBucket: "crewstudio-35d88.firebasestorage.app",
+  messagingSenderId: "850782928925",
+  appId: "1:850782928925:web:a3308ca535993632f806f4",
+  measurementId: "G-PZBV4HCN17"
+};
+
+const app = initializeApp(firebaseConfig);
+
+const auth = getAuth(app);
+
+const provider = new GoogleAuthProvider();
+```
+
+
 import { useState, useMemo, useEffect } from "react";
 
 /* ─── Constants ─────────────────────────────────────────────── */
