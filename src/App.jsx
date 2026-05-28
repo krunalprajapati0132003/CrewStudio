@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+
 /* ─── Constants ─────────────────────────────────────────────── */
 const ROLES = ["Cinematographer","Videographer","Drone Operator","Camera Assistant","Editor","Colorist","Director of Photography","Sound Engineer"];
 const DEFAULT_EVENTS = ["Mehndi","Sangeet","Haldi","Wedding Ceremony","Reception","Pre-Wedding Shoot","Engagement"];
@@ -207,6 +208,7 @@ function AuthPage({ onLogin }) {
               tab==="login"?"Sign In to Studio →":"Create Account →"
             )}
           </button>
+
           {/* Switch tab link */}
           <p style={{textAlign:"center",marginTop:20,fontSize:13,color:"#3a3028"}}>
             {tab==="login"?"Don't have an account? ":"Already have an account? "}
