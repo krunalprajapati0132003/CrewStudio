@@ -17,22 +17,20 @@ const INITIAL_TEAM = [
   { id:3, name:"Palak",           role:"Cinematographer", phone:"9823456789", rate:6000, hires:[] },
   { id:4, name:"Akash Shah",      role:"Cinematographer", phone:"9812345678", rate:4000, hires:[] },
 ];
-async function loadState(key, fallback) {
+function loadState(key, fallback) {
 
   try {
 
-    const data = await loadData(key);
+    const v = localStorage.getItem(key);
 
-    return data || fallback;
+    return v ? JSON.parse(v) : fallback;
 
   } catch {
 
     return fallback;
   }
 }
-{
-  try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
-  catch { return fallback; }
+
 }
 async function saveState(key, val) {
 
@@ -45,10 +43,16 @@ async function saveState(key, val) {
     console.error(err);
   }
 }
+function saveState(key, val) {
 
-{ext
+  try {
 
-  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+    localStorage.setItem(
+      key,
+      JSON.stringify(val)
+    );
+
+  } catch {}
 }
 
 /* ════════════════════════════════════════════════════════════════
