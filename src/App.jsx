@@ -60,22 +60,23 @@ function AuthPage({ onLogin }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
-
-  function handleLogin() {
-    
-    setError("");
-    if (!form.email || !form.password) { setError("Please fill in all fields."); return; }
-    const users = loadState("crew_users", []);
-    const user = users.find(u => u.email === form.email.toLowerCase().trim());
-    if (!user) { setError("No account found with this email."); return; }
-    if (user.password !== form.password) { setError("Incorrect password."); return; }
-    setLoading(true);
-    setTimeout(() => {
-      saveState("crew_session", { email: user.email, name: user.name, loggedIn: true });
-      onLogin(user);
-    }, 800);
-  }
+  
 function handleLogin() {
+
+  setError("");
+
+  const ADMIN_EMAIL = "crewstudio@gmail.com";
+
+  const ADMIN_PASSWORD = "Wedding@2026";
+
+  if (
+    form.email.trim() === ADMIN_EMAIL &&
+    form.password === ADMIN_PASSWORD
+  ) {
+
+    const sessionUser = {
+      name: "Crew"
+{
 
   setError("");
 
