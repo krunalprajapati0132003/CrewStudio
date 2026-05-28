@@ -17,6 +17,7 @@ const INITIAL_TEAM = [
   { id:3, name:"Palak",           role:"Cinematographer", phone:"9823456789", rate:6000, hires:[] },
   { id:4, name:"Akash Shah",      role:"Cinematographer", phone:"9812345678", rate:4000, hires:[] },
 ];
+
 function loadState(key, fallback) {
 
   try {
@@ -31,17 +32,6 @@ function loadState(key, fallback) {
   }
 }
 
-}
-async function saveState(key, val) {
-  try {
-
-    await saveData(key, val);
-
-  } catch (err) {
-
-    console.error(err);
-  }
-}
 function saveState(key, val) {
 
   try {
@@ -97,71 +87,6 @@ function handleLogin() {
 }
 
 
-  else {
-
-    setError("Invalid email or password.");
-  }
-}
-{
-
-  setError("");
-
-  if (!form.email || !form.password) {
-    setError("Please fill in all fields.");
-    return;
-  }
-
-  const users = loadState("crew_users", []);
-
-  const user = users.find(
-    u => u.email === form.email.toLowerCase().trim()
-  );
-
-  if (!user) {
-    setError("No account found with this email.");
-    return;
-  }
-
-  if (user.password !== form.password) {
-    setError("Incorrect password.");
-    return;
-  }
-
-  const sessionUser = {
-    name: user.name,
-    email: user.email,
-    loggedIn: true
-  };
-
-  saveState("crew_session", sessionUser);
-
-  onLogin(sessionUser);
-}
-
-  if (alreadyExists) {
-    setError("Account already exists.");
-    return;
-  }
-
-  const newUser = {
-    name: form.name,
-    email: form.email,
-    password: form.password,
-    loggedIn: true
-  };
-
-  saveState(
-    "crew_users",
-    [...users, newUser]
-  );
-
-  saveState(
-    "crew_session",
-    newUser
-  );
-
-  onLogin(newUser);
-}
   const S = `
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Mono:wght@300;400&display=swap');
     *{box-sizing:border-box;margin:0;padding:0;}
