@@ -49,24 +49,50 @@ function AuthPage({ onLogin }) {
       onLogin(user);
     }, 800);
   }
+function handleSignup() {
 
-  function handleSignup() {
-    setError("");
-    if (!form.name || !form.email || !form.password || !form.confirm) { setError("Please fill in all fields."); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) { setError("Enter a valid email address."); return; }
-    if (form.password.length < 6) { setError("Password must be at least 6 characters."); return; }
-    if (form.password !== form.confirm) { setError("Passwords do not match."); return; }
-    const users = loadState("crew_users", []);
-    if (users.find(u => u.email === form.email.toLowerCase().trim())) { setError("This email is already registered."); return; }
-    const newUser = { name: form.name.trim(), email: form.email.toLowerCase().trim(), password: form.password, createdAt: new Date().toISOString() };
-    saveState("crew_users", [...users, newUser]);
-    setLoading(true);
-    setTimeout(() => {
-      saveState("crew_session", { email: newUser.email, name: newUser.name, loggedIn: true });
-      onLogin(newUser);
-    }, 800);
+  setError("");
+
+  if (!form.name || !form.email || !form.password) {
+    setError("Please fill all fields.");
+    return;
   }
 
+  if (form.password !== form.confirm) {
+    setError("Passwords do not match.");
+    return;
+  }
+
+  const users = loadState("crew_users", []);
+
+  const alreadyExists = users.find(
+    u => u.email === form.email
+  );
+
+  if (alreadyExists) {
+    setError("Account already exists.");
+    return;
+  }
+
+  const newUser = {
+    name: form.name,
+    email: form.email,
+    password: form.password,
+    loggedIn: true
+  };
+
+  saveState(
+    "crew_users",
+    [...users, newUser]
+  );
+
+  saveState(
+    "crew_session",
+    newUser
+  );
+
+  onLogin(newUser);
+}
   const S = `
     @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Mono:wght@300;400&display=swap');
     *{box-sizing:border-box;margin:0;padding:0;}
