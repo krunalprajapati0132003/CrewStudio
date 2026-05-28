@@ -66,7 +66,6 @@ function handleLogin() {
   setError("");
 
   const ADMIN_EMAIL = "crewstudio@gmail.com";
-
   const ADMIN_PASSWORD = "Wedding@2026";
 
   if (
@@ -75,7 +74,23 @@ function handleLogin() {
   ) {
 
     const sessionUser = {
-      name: "Crew
+      name: "Crew Studio Admin",
+      email: ADMIN_EMAIL,
+      loggedIn: true
+    };
+
+    localStorage.setItem(
+      "crew_session",
+      JSON.stringify(sessionUser)
+    );
+
+    onLogin(sessionUser);
+
+  } else {
+
+    setError("Invalid email or password.");
+  }
+}
 {
 
   setError("");
@@ -269,12 +284,15 @@ function handleLogin() {
           )}
 
           {/* Submit */}
-          <button onClick={tab==="login"?handleLogin:handleSignup} disabled={loading}
+      
+<button
+  onClick={handleLogin} disabled={loading}
             style={{width:"100%",marginTop:24,padding:"16px",background:loading?"#5a4a2a":"linear-gradient(135deg,#c9a96e,#a8814a)",color:"#0a0a0a",border:"none",borderRadius:6,fontSize:16,fontWeight:600,letterSpacing:"0.06em",cursor:loading?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10,transition:"all 0.25s",fontFamily:"'Cormorant Garamond',Georgia,serif"}}>
             {loading?(
               <><div style={{width:18,height:18,border:"2px solid #0a0a0a44",borderTopColor:"#0a0a0a",borderRadius:"50%",animation:"spin 0.8s linear infinite"}}/> Signing in…</>
             ):(
-              tab==="login"?"Sign In to Studio →":"Create Account →"
+        
+"Sign In to Studio →"
             )}
           </button>
 
