@@ -237,7 +237,6 @@ function AuthPage({ onLogin }) {
               tab==="login"?"Sign In to Studio →":"Create Account →"
             )}
           </button>
-```jsx id="v66n9k"
 <button
   onClick={async () => {
     try {
