@@ -59,6 +59,18 @@ function saveState(key, val) {
    AUTH PAGE
 ════════════════════════════════════════════════════════════════ */
 function AuthPage({ onLogin }) {
+function AuthPage() {
+
+   login code
+
+   signup code
+
+   RETURN (
+      login page UI
+      sign in button
+      signup button
+   )
+}
   const [tab, setTab] = useState("login"); // "login" | "signup"
   const [form, setForm] = useState({ name:"", email:"", password:"", confirm:"" });
   const [error, setError] = useState("");
