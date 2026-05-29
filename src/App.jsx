@@ -11,8 +11,6 @@ const FIXED_EMAIL = "crewstudio@gmail.com";
 const FIXED_PASS  = "Weddings@2026";
 const ADMIN_WA    = "919876543210";
 
-// ── PASTE YOUR FIREBASE URL HERE ──────────────────────────────
-// Example: "https://crew-studio-xxxxx-default-rtdb.firebaseio.com"
 const FIREBASE_URL = "https://crewstudio-35d88-default-rtdb.asia-southeast1.firebasedatabase.app";
 // ─────────────────────────────────────────────────────────────
 
