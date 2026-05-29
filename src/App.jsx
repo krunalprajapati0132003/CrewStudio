@@ -441,18 +441,36 @@ function AdminApp({ user, onLogout }) {
   const [weddings,setWeddingsRaw]=useState(()=>loadState("crew_weddings",[]));
   const [syncing,setSyncing]=useState(USE_FIREBASE);
 
-  /* Load from Firebase on mount + listen for real-time changes */
+  /* Load from Firebase on mount + smart sync + real-time listener */
   useEffect(()=>{
     if(!USE_FIREBASE){setSyncing(false);return;}
     let closeFns=[];
     (async()=>{
       const [fbTeam,fbWeddings]=await Promise.all([fbGet("crew_team"),fbGet("crew_weddings")]);
-      if(fbTeam)  setTeamRaw(fbTeam);
-      if(fbWeddings) setWeddingsRaw(Array.isArray(fbWeddings)?fbWeddings:Object.values(fbWeddings||{}));
+
+      // Smart sync: Firebase has data -> use it. Firebase empty -> push localStorage up.
+      const fbTeamArr = Array.isArray(fbTeam) ? fbTeam : (fbTeam ? Object.values(fbTeam) : []);
+      if(fbTeamArr.length>0){
+        setTeamRaw(fbTeamArr);
+      } else {
+        const localTeam=loadState("crew_team",INITIAL_TEAM);
+        await fbSet("crew_team",localTeam);
+        setTeamRaw(localTeam);
+      }
+
+      const fbWeddingsArr = Array.isArray(fbWeddings) ? fbWeddings : (fbWeddings ? Object.values(fbWeddings) : []);
+      if(fbWeddingsArr.length>0){
+        setWeddingsRaw(fbWeddingsArr);
+      } else {
+        const localWeddings=loadState("crew_weddings",[]);
+        await fbSet("crew_weddings",localWeddings);
+        setWeddingsRaw(localWeddings);
+      }
+
       setSyncing(false);
     })();
-    closeFns.push(fbListen("crew_team",    d=>{ if(d) setTeamRaw(d); }));
-    closeFns.push(fbListen("crew_weddings",d=>{ if(d) setWeddingsRaw(Array.isArray(d)?d:Object.values(d||{})); }));
+    closeFns.push(fbListen("crew_team",    d=>{ if(d){ const a=Array.isArray(d)?d:Object.values(d); setTeamRaw(a); }}));
+    closeFns.push(fbListen("crew_weddings",d=>{ if(d){ const a=Array.isArray(d)?d:Object.values(d); setWeddingsRaw(a); }}));
     return ()=>closeFns.forEach(f=>f());
   },[]);
 
@@ -473,7 +491,7 @@ function AdminApp({ user, onLogout }) {
     });
   }
 
-  // ✅ ALL hooks must be declared before any conditional return
+  // ✅ ALL hooks declared before any conditional return
   const [view,setView]=useState("dashboard");
   const [selectedMember,setSelectedMember]=useState(null);
   const [selectedWedding,setSelectedWedding]=useState(null);
