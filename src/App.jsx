@@ -20,7 +20,7 @@ const FIXED_PASS  = "Weddings@2026";
 const ADMIN_WA    = "+919876543210"; // <-- REPLACE WITH YOUR ACTUAL WHATSAPP NUMBER (Keep the 91 country code)
 
 // ── PASTE YOUR FIREBASE URL HERE (WHEN READY) ─────────────────
-const FIREBASE_URL = "https://crewstudio-35d88-default-rtdb.asia-southeast1.firebasedatabase.app/";
+const FIREBASE_URL = "https://crewstudio-35d88-default-rtdb.asia-southeast1.firebasedatabase.app";
 // ──────────────────────────────────────────────────────────────
 
 // FIX: Set to false to use Local Storage so the app actually loads!
