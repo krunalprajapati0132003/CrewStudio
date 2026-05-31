@@ -110,6 +110,18 @@ function RoleSelect({ value, onChange }) {
   );
 }
 
+function CrewStudioBrand({ small=false, portal=false }) {
+  return (
+    <div style={{display:"flex",alignItems:"center",gap:small?8:10}}>
+      <img src={`${process.env.PUBLIC_URL}/crewstudio-logo.svg`} alt="CrewStudio logo" style={{width:small?28:36,height:small?28:36,borderRadius:small?7:9,objectFit:"cover",boxShadow:"0 0 0 1px #c9a96e33"}}/>
+      <div style={{display:"flex",alignItems:"baseline",gap:small?6:8}}>
+        <span style={{fontSize:small?18:22,fontWeight:300,letterSpacing:"0.06em"}}>CREW</span>
+        <span style={{fontSize:small?10:12,fontFamily:"'DM Mono',monospace",color:"#c9a96e",letterSpacing:"0.12em"}}>{portal?"PORTAL":"STUDIO"}</span>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Responsive Hook ─────────────────────────────────────── */
 function useIsMobile() {
   const [isMobile,setIsMobile] = useState(window.innerWidth<768);
@@ -185,7 +197,7 @@ function AuthPage({ onLogin }) {
     <div style={{minHeight:"100vh",background:"#060504",display:"flex",fontFamily:"'Cormorant Garamond',Georgia,serif",color:"#e8e0d4",overflowY:"auto"}}>
       <style>{S}</style>
       {!isMobile&&<div style={{flex:"0 0 40%",background:"linear-gradient(160deg,#0e0b08,#060504)",borderRight:"1px solid #1a1612",display:"flex",flexDirection:"column",justifyContent:"center",padding:"48px 56px"}}>
-        <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:24}}><span style={{fontSize:28,fontWeight:300,letterSpacing:"0.1em"}}>CREW</span><span style={{fontSize:14,fontFamily:"'DM Mono',monospace",color:"#c9a96e",letterSpacing:"0.15em"}}>STUDIO</span></div>
+        <div style={{marginBottom:24}}><CrewStudioBrand/></div>
         <h2 style={{fontSize:36,fontWeight:300,marginBottom:12,lineHeight:1.2}}>Wedding Crew<br/>Management</h2>
         <p style={{fontSize:15,color:"#5a5048",lineHeight:1.7}}>Manage your team, assign bookings, send WhatsApp confirmations — all in one place.</p>
       </div>}
@@ -219,7 +231,7 @@ function AuthPage({ onLogin }) {
       <style>{S}</style>
       {!isMobile&&<div style={{flex:"0 0 45%",background:"linear-gradient(160deg,#0e0b08,#060504)",borderRight:"1px solid #1a1612",display:"flex",flexDirection:"column",justifyContent:"center",padding:"48px 56px",position:"relative",overflow:"hidden"}}>
         <div style={{position:"absolute",inset:0,backgroundImage:"radial-gradient(circle at 30% 70%, #c9a96e08 0%, transparent 50%)",pointerEvents:"none"}}/>
-        <div style={{display:"flex",alignItems:"baseline",gap:10,marginBottom:24}}><span style={{fontSize:28,fontWeight:300,letterSpacing:"0.1em"}}>CREW</span><span style={{fontSize:14,fontFamily:"'DM Mono',monospace",color:"#c9a96e",letterSpacing:"0.15em"}}>STUDIO</span></div>
+        <div style={{marginBottom:24}}><CrewStudioBrand/></div>
         <h2 style={{fontSize:38,fontWeight:300,marginBottom:16,lineHeight:1.2}}>Your Wedding Crew,<br/>Organized.</h2>
         <p style={{fontSize:15,color:"#5a5048",lineHeight:1.7}}>Assign photographers, videographers & editors to events. Track bookings, send WhatsApp messages, and manage payouts — all in one elegant platform.</p>
         <div style={{marginTop:40,padding:"16px 0",borderTop:"1px solid #1a1612"}}>
@@ -229,7 +241,7 @@ function AuthPage({ onLogin }) {
       <div style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",padding:isMobile?"24px":"48px 56px"}}>
         <div style={{width:"100%",maxWidth:400,animation:"fadeUp 0.5s ease both"}}>
           <div style={{marginBottom:32}}>
-            {isMobile&&<div style={{display:"flex",alignItems:"baseline",gap:8,marginBottom:20}}><span style={{fontSize:20,fontWeight:300}}>CREW</span><span style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:"#c9a96e"}}>STUDIO</span></div>}
+            {isMobile&&<div style={{marginBottom:20}}><CrewStudioBrand small/></div>}
             <h2 style={{fontSize:30,fontWeight:300,marginBottom:4}}>Sign In</h2>
             <p style={{fontSize:13,color:"#5a5048"}}>Welcome back to your studio</p>
           </div>
@@ -716,7 +728,7 @@ function TeamView({ team, weddings, adminProfile, onConfirmHire }) {
           </div>
         )}
         <div style={{textAlign:"center",marginBottom:32}}>
-          <div style={{display:"flex",alignItems:"baseline",gap:8,justifyContent:"center",marginBottom:8}}><span style={{fontSize:22,fontWeight:300,letterSpacing:"0.1em"}}>CREW</span><span style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:"#c9a96e",letterSpacing:"0.15em"}}>PORTAL</span></div>
+          <div style={{display:"flex",justifyContent:"center",marginBottom:8}}><CrewStudioBrand small portal/></div>
           <div style={{width:32,height:1,background:"#c9a96e44",margin:"0 auto 20px"}}/>
           <h2 style={{fontSize:28,fontWeight:300,marginBottom:8}}>Who are you?</h2>
           <p style={{fontSize:13,color:"#5a5048"}}>Select your name to sign in</p>
@@ -768,7 +780,7 @@ function TeamView({ team, weddings, adminProfile, onConfirmHire }) {
       <div style={{background:"#0e0c0a",borderBottom:"1px solid #1e1a16",padding:isMobile?"14px 20px":"0 28px",display:"flex",alignItems:"center",justifyContent:"space-between",height:isMobile?"auto":56,position:"sticky",top:0,zIndex:100}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           {adminProfile?.studioName&&<span style={{fontSize:15,fontWeight:600,color:"#c9a96e",letterSpacing:"0.04em"}}>{adminProfile.studioName}</span>}
-          {!adminProfile?.studioName&&<><span style={{fontSize:18,fontWeight:300}}>CREW</span><span style={{fontSize:11,fontFamily:"'DM Mono',monospace",color:"#c9a96e"}}>PORTAL</span></>}
+          {!adminProfile?.studioName&&<CrewStudioBrand small portal/>}
         </div>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
           <span style={{fontSize:13,color:"#7a6f63",fontFamily:"'DM Mono',monospace"}}>{me?.name?.split(" ")[0]}</span>
@@ -965,6 +977,12 @@ function AdminApp({ user, onLogout }) {
     msgDecline:"Hi {adminName}! This is {name}. I want to *DECLINE* my booking:\n\n📅 *{date}*\n💍 *{wedding}*\n🎬 *{event}*\n🎭 Role: *{role}*\n⏱ {dayType}",
   }));
   function setProfile(v){setProfileRaw(prev=>{const next=typeof v==="function"?v(prev):v;saveState(profileKey,next);if(USE_FIREBASE)fbSet(profileKey,next);return next;});}
+  function handleLogoUpload(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setProfile(prev => ({ ...prev, studioLogo: reader.result }));
+    reader.readAsDataURL(file);
+  }
 
   // FEATURE 5: Dashboard state
   const [dashSearch,setDashSearch]=useState("");
@@ -1137,7 +1155,7 @@ function AdminApp({ user, onLogout }) {
     <div style={{minHeight:"100vh",background:"#0a0a0a",fontFamily:"'Cormorant Garamond',Georgia,serif",color:"#e8e0d4",paddingBottom:70}}>
       <style>{S}</style>
       <div style={{background:"#0e0c0a",borderBottom:"1px solid #1e1a16",padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
-        <div style={{display:"flex",alignItems:"baseline",gap:8}}><span style={{fontSize:18,fontWeight:300,letterSpacing:"0.06em"}}>CREW</span><span style={{fontSize:11,fontFamily:"'DM Mono',monospace",color:"#c9a96e"}}>STUDIO</span></div>
+        <CrewStudioBrand small/>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
           {view==="weddings"&&<button className="btn-gold" style={{padding:"8px 14px",fontSize:13}} onClick={openAddWedding}>+ Event</button>}
           {view==="team"&&<button className="btn-gold" style={{padding:"8px 14px",fontSize:13}} onClick={()=>setShowAddMember(true)}>+ Member</button>}
@@ -1354,7 +1372,17 @@ function AdminApp({ user, onLogout }) {
                   <div><label style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#5a5048",display:"block",marginBottom:5}}>WHATSAPP NUMBER</label><input value={profile.waNumber||""} onChange={e=>setProfile({...profile,waNumber:e.target.value.replace(/[^0-9]/g,"")})} placeholder="919876543210"/></div>
                   {/* FEATURE 6: Social media + contact links */}
                   <div><label style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#c9a96e",display:"block",marginBottom:5}}>📞 CONTACT NUMBER</label><input value={profile.phone||""} onChange={e=>setProfile({...profile,phone:e.target.value})} placeholder="Phone/contact number"/></div>
-                  <div><label style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#c9a96e",display:"block",marginBottom:5}}>LOGO IMAGE URL</label><input value={profile.studioLogo||""} onChange={e=>setProfile({...profile,studioLogo:e.target.value})} placeholder="https://.../logo.png"/></div>
+                  <div>
+                    <label style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#c9a96e",display:"block",marginBottom:5}}>UPLOAD LOGO IMAGE</label>
+                    <div style={{display:"flex",gap:10,alignItems:"center",flexWrap:"wrap"}}>
+                      {profile.studioLogo&&<img src={profile.studioLogo} alt="Studio logo preview" style={{width:52,height:52,borderRadius:"50%",objectFit:"cover",border:"1px solid #c9a96e44"}}/>}
+                      <label style={{background:"#1a1612",border:"1px solid #c9a96e44",color:"#c9a96e",fontSize:12,padding:"9px 14px",borderRadius:5,fontFamily:"'DM Mono',monospace",cursor:"pointer"}}>
+                        Choose Image
+                        <input type="file" accept="image/*" onChange={e=>handleLogoUpload(e.target.files?.[0])} style={{display:"none"}}/>
+                      </label>
+                      {profile.studioLogo&&<button onClick={()=>setProfile({...profile,studioLogo:""})} style={{background:"none",border:"1px solid #2a2420",color:"#f87171",fontSize:12,padding:"8px 12px",borderRadius:5,fontFamily:"'DM Mono',monospace"}}>Remove</button>}
+                    </div>
+                  </div>
                   <div><label style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#c9a96e",display:"block",marginBottom:5}}>🌐 WEBSITE</label><input value={profile.website||""} onChange={e=>setProfile({...profile,website:e.target.value})} placeholder="https://yourwebsite.com"/></div>
                   <div><label style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#c9a96e",display:"block",marginBottom:5}}>📸 INSTAGRAM</label><input value={profile.instagram||""} onChange={e=>setProfile({...profile,instagram:e.target.value})} placeholder="@yourhandle"/></div>
                   <div><label style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#c9a96e",display:"block",marginBottom:5}}>📘 FACEBOOK</label><input value={profile.facebook||""} onChange={e=>setProfile({...profile,facebook:e.target.value})} placeholder="Page or profile URL"/></div>
@@ -1397,7 +1425,7 @@ function AdminApp({ user, onLogout }) {
     <div style={{minHeight:"100vh",background:"#0a0a0a",fontFamily:"'Cormorant Garamond',Georgia,serif",color:"#e8e0d4"}}>
       <style>{S}</style>
       <div style={{borderBottom:"1px solid #1e1a16",padding:"0 32px",display:"flex",alignItems:"center",justifyContent:"space-between",height:64,position:"sticky",top:0,background:"#0a0a0a",zIndex:100}}>
-        <div style={{display:"flex",alignItems:"baseline",gap:10}}><span style={{fontSize:22,fontWeight:300,letterSpacing:"0.06em"}}>CREW</span><span style={{fontSize:13,fontFamily:"'DM Mono',monospace",color:"#c9a96e"}}>STUDIO</span></div>
+        <CrewStudioBrand/>
         <nav style={{display:"flex",gap:4}}>{NAV_ITEMS.map(n=><button key={n.id} className={`nav-item ${view===n.id?"active":""}`} onClick={()=>setView(n.id)}>{n.label}</button>)}</nav>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
           <span style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:"#5a5048"}}>{user.name}</span>
@@ -1687,7 +1715,18 @@ function AdminApp({ user, onLogout }) {
                   <p style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#c9a96e",textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:12}}>Company / Social Links</p>
                   <div style={{display:"flex",flexDirection:"column",gap:12}}>
                     <div><label style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#5a5048",display:"block",marginBottom:4}}>📞 CONTACT NUMBER</label><input value={profile.phone||""} onChange={e=>setProfile({...profile,phone:e.target.value})} placeholder="Phone / contact number"/></div>
-                    <div><label style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#5a5048",display:"block",marginBottom:4}}>LOGO IMAGE URL</label><input value={profile.studioLogo||""} onChange={e=>setProfile({...profile,studioLogo:e.target.value})} placeholder="https://.../logo.png"/></div>
+                    <div>
+                      <label style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#5a5048",display:"block",marginBottom:4}}>UPLOAD LOGO IMAGE</label>
+                      <div style={{display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
+                        {profile.studioLogo&&<img src={profile.studioLogo} alt="Studio logo preview" style={{width:58,height:58,borderRadius:"50%",objectFit:"cover",border:"1px solid #c9a96e44"}}/>}
+                        <label style={{background:"#1a1612",border:"1px solid #c9a96e44",color:"#c9a96e",fontSize:12,padding:"10px 16px",borderRadius:5,fontFamily:"'DM Mono',monospace",cursor:"pointer"}}>
+                          Choose Image
+                          <input type="file" accept="image/*" onChange={e=>handleLogoUpload(e.target.files?.[0])} style={{display:"none"}}/>
+                        </label>
+                        {profile.studioLogo&&<button onClick={()=>setProfile({...profile,studioLogo:""})} style={{background:"none",border:"1px solid #2a2420",color:"#f87171",fontSize:12,padding:"9px 14px",borderRadius:5,fontFamily:"'DM Mono',monospace"}}>Remove</button>}
+                      </div>
+                      <p style={{fontSize:10,color:"#3a3028",fontFamily:"'DM Mono',monospace",marginTop:6}}>Saved in your profile and shown in crew portal.</p>
+                    </div>
                     <div><label style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#5a5048",display:"block",marginBottom:4}}>🌐 WEBSITE</label><input value={profile.website||""} onChange={e=>setProfile({...profile,website:e.target.value})} placeholder="https://krunalfilms.in"/></div>
                     <div><label style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#5a5048",display:"block",marginBottom:4}}>📸 INSTAGRAM</label><input value={profile.instagram||""} onChange={e=>setProfile({...profile,instagram:e.target.value})} placeholder="@handle or full URL"/></div>
                     <div><label style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#5a5048",display:"block",marginBottom:4}}>📘 FACEBOOK</label><input value={profile.facebook||""} onChange={e=>setProfile({...profile,facebook:e.target.value})} placeholder="Page or profile URL"/></div>
