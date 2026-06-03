@@ -329,12 +329,13 @@ function MiniCalendar({ selectedDates, onToggleDate, bookedMap }) {
 }
 
 /* ─── Event Assigner with Time, Crew Slots, Location & Multi-Event (Features 1, 8, 9) ── */
-function EventAssigner({ selectedDates, eventDays, setEventDays, team, weddingName, eventType }) {
+function EventAssigner({ selectedDates, eventDays, setEventDays, team, weddingName, eventType, onQuickHire }) {
   const [openDate,setOpenDate]=useState(null);
   const [customInputKey,setCustomInputKey]=useState(null);
   const [customText,setCustomText]=useState("");
   const [quickHireKey,setQuickHireKey]=useState(null); // "date|event" key for inline hire
   const [quickHireForm,setQuickHireForm]=useState({memberId:"",dayType:"Full Day",hireRole:ROLES[0],status:"Pending"});
+  const [quickHireDone,setQuickHireDone]=useState({}); // tracks confirmed hires per key
 
   const typeObj = EVENT_TYPES.find(et=>et.id===(eventType||"wedding"));
   const QUICK_EVENTS = typeObj?.subEvents?.length>0 ? typeObj.subEvents : ["Mehndi","Sangeet","Haldi","Wedding Ceremony","Reception","Pre-Wedding Shoot","Engagement","Tilak","Ring Ceremony","Garba Night","Cocktail Party","Baby Shower","Birthday","Corporate Event"];
@@ -480,17 +481,29 @@ function EventAssigner({ selectedDates, eventDays, setEventDays, team, weddingNa
                             <div style={{display:"flex",gap:6}}>
                               <button onClick={()=>{
                                 if(!quickHireForm.memberId)return;
-                                const hire={wedding:weddingName||"",weddingId:null,event:ed.event,date,status:quickHireForm.status,dayType:quickHireForm.dayType,hireRole:quickHireForm.hireRole,paid:false,startTime:ed.startTime||"",endTime:ed.endTime||""};
-                                // This will be picked up by the parent via eventDays
-                                // Store memberId in slot so parent can sync
-                                setEventDays(prev=>prev.map(e=>e.date===date&&e.event===ed.event?{...e,_quickHire:{...hire,memberId:Number(quickHireForm.memberId)}}:e));
+                                if(onQuickHire){
+                                  onQuickHire({
+                                    memberId:Number(quickHireForm.memberId),
+                                    event:ed.event,
+                                    date,
+                                    dayType:quickHireForm.dayType,
+                                    hireRole:quickHireForm.hireRole,
+                                    status:"Pending",
+                                    startTime:ed.startTime||"",
+                                    endTime:ed.endTime||"",
+                                  });
+                                }
+                                setQuickHireDone(prev=>({...prev,[qKey]:(prev[qKey]||0)+1}));
                                 setQuickHireKey(null);
                               }} style={{flex:1,background:"linear-gradient(135deg,#c9a96e,#a8814a)",color:"#0a0a0a",border:"none",padding:"8px",borderRadius:3,fontSize:12,fontWeight:600,fontFamily:"'DM Mono',monospace",cursor:"pointer"}}>Hire ✓</button>
                               <button onClick={()=>setQuickHireKey(null)} style={{background:"none",border:"1px solid #2a2420",color:"#5a5048",padding:"8px 12px",borderRadius:3,cursor:"pointer"}}>Cancel</button>
                             </div>
                           </div>
                         ):(
-                          <button onClick={()=>{setQuickHireKey(qKey);setQuickHireForm({memberId:"",dayType:"Full Day",hireRole:ROLES[0],status:"Pending"});}} style={{background:"#1a1612",border:"1px dashed #c9a96e44",color:"#c9a96e88",fontSize:11,padding:"6px",borderRadius:3,fontFamily:"'DM Mono',monospace",width:"100%",textAlign:"center",cursor:"pointer"}}>⚡ Quick Hire for this Event</button>
+                          <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                            {quickHireDone[qKey]>0&&<span style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#4ade80",background:"#4ade8011",border:"1px solid #4ade8022",padding:"2px 8px",borderRadius:2}}>✓ {quickHireDone[qKey]} hired</span>}
+                            <button onClick={()=>{setQuickHireKey(qKey);setQuickHireForm({memberId:"",dayType:"Full Day",hireRole:ROLES[0],status:"Pending"});}} style={{background:"#1a1612",border:"1px dashed #c9a96e44",color:"#c9a96e88",fontSize:11,padding:"6px 10px",borderRadius:3,fontFamily:"'DM Mono',monospace",cursor:"pointer"}}>⚡ Quick Hire</button>
+                          </div>
                         )}
                       </div>
                     );
@@ -1157,30 +1170,22 @@ function AdminApp({ user, onLogout }) {
   function saveWedding(){
     if(!wForm.name)return;
     const eventId=editWedding?.id||Date.now();
-    // Process _quickHire: extract and apply to team, then strip from eventDays
-    const cleanEventDays=wForm.eventDays.map(ed=>{
-      const {_quickHire,...rest}=ed;
-      return rest;
-    });
-    const quickHires=wForm.eventDays.filter(ed=>ed._quickHire).map(ed=>({...ed._quickHire,weddingId:eventId,wedding:wForm.name}));
-    const nextWedding={...(editWedding||{}),...wForm,eventDays:cleanEventDays,id:eventId,adminStudio:profile.studioName||profile.adminName||"",adminLogo:profile.studioLogo||""};
+    const nextWedding={...(editWedding||{}),...wForm,id:eventId,adminStudio:profile.studioName||profile.adminName||"",adminLogo:profile.studioLogo||""};
     if(editWedding){
       setWeddings(weddings.map(w=>w.id===editWedding.id?nextWedding:w));
     }else{
       setWeddings([...weddings,nextWedding]);
     }
     syncSlotBookings(nextWedding,editWedding?.name);
-    // Apply quick hires to team
-    if(quickHires.length>0){
-      setTeam(prev=>prev.map(member=>{
-        const myQuick=quickHires.filter(h=>h.memberId===member.id);
-        if(!myQuick.length) return member;
-        const newHires=myQuick.map(h=>({wedding:h.wedding,weddingId:h.weddingId,event:h.event,date:h.date,status:h.status,dayType:h.dayType,hireRole:h.hireRole,paid:false,startTime:h.startTime||"",endTime:h.endTime||""}));
-        return {...member,hires:[...member.hires,...newHires]};
-      }));
-    }
     setSelectedWedding(nextWedding);
     setShowAddWedding(false);
+  }
+  function handleQuickHire({memberId,event,date,dayType,hireRole,status,startTime,endTime}){
+    // wForm may not have weddingId yet for new weddings; use name as fallback
+    const weddingId=editWedding?.id||null;
+    const weddingName=wForm.name;
+    const hire={wedding:weddingName,weddingId,event,date,status:status||"Pending",dayType,hireRole,paid:false,startTime,endTime};
+    setTeam(prev=>prev.map(m=>m.id===memberId?{...m,hires:[...m.hires,hire]}:m));
   }
   function removeWedding(id){
     const wedding=weddings.find(w=>w.id===id);
@@ -1938,8 +1943,9 @@ function AdminApp({ user, onLogout }) {
               eventDays={wForm.eventDays}
               setEventDays={fn=>setWForm(prev=>({...prev,eventDays:typeof fn==="function"?fn(prev.eventDays):fn}))}
               team={team}
-              weddingName={editWedding?.name||null}
+              weddingName={wForm.name||editWedding?.name||null}
               eventType={wForm.eventType}
+              onQuickHire={handleQuickHire}
             />
           )}
         </div>
