@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, createContext, useContext } from "react";
 
 /* ─── Constants ─────────────────────────────────────────────── */
 const ROLES = [
@@ -42,6 +42,58 @@ const FIREBASE_URL = "https://crewstudiov2-default-rtdb.asia-southeast1.firebase
 const USE_FIREBASE = true;
 
 function evColor(ev){ return EVENT_COLOR[ev]||"#c9a96e"; }
+
+/* ─── Themes ─────────────────────────────────────────────────── */
+const THEMES = {
+  golden: {
+    id:"golden", label:"🌑 Golden Dark", emoji:"🌑",
+    bg:"#060504", bg2:"#0a0a0a", bg3:"#0e0c0a", bgCard:"#0e0c0a",
+    border:"#1e1a16", border2:"#2a2420",
+    text:"#e8e0d4", textMuted:"#7a6f63", textFaint:"#5a5048", textGhost:"#3a3028",
+    accent:"#c9a96e", accentAlt:"#a8814a",
+    accentGrad:"linear-gradient(135deg,#c9a96e,#a8814a)",
+    navActive:"#c9a96e", inputBg:"#0e0c0a",
+  },
+  light: {
+    id:"light", label:"☀️ Light", emoji:"☀️",
+    bg:"#f5f0e8", bg2:"#ede8dc", bg3:"#ffffff", bgCard:"#ffffff",
+    border:"#ddd5c5", border2:"#ccc0a8",
+    text:"#2a1f0e", textMuted:"#7a6040", textFaint:"#a08060", textGhost:"#c0a880",
+    accent:"#b07830", accentAlt:"#8a5e22",
+    accentGrad:"linear-gradient(135deg,#b07830,#8a5e22)",
+    navActive:"#b07830", inputBg:"#f9f5ee",
+  },
+  midnight: {
+    id:"midnight", label:"🌊 Midnight Blue", emoji:"🌊",
+    bg:"#040810", bg2:"#080f1e", bg3:"#0c1428", bgCard:"#0c1428",
+    border:"#1a2540", border2:"#243050",
+    text:"#d0e4ff", textMuted:"#6080a8", textFaint:"#405878", textGhost:"#2a3a58",
+    accent:"#4a9eff", accentAlt:"#2e7dd9",
+    accentGrad:"linear-gradient(135deg,#4a9eff,#2e7dd9)",
+    navActive:"#4a9eff", inputBg:"#0c1428",
+  },
+  colorful: {
+    id:"colorful", label:"🌈 Colorful", emoji:"🌈",
+    bg:"#0d0010", bg2:"#12001a", bg3:"#1a0024", bgCard:"#1a0024",
+    border:"#3a1050", border2:"#4a1a60",
+    text:"#f0d8ff", textMuted:"#b070d0", textFaint:"#8040a8", textGhost:"#5a2080",
+    accent:"#e040fb", accentAlt:"#aa00ff",
+    accentGrad:"linear-gradient(135deg,#e040fb,#aa00ff,#2979ff)",
+    navActive:"#e040fb", inputBg:"#1a0024",
+  },
+  rosegold: {
+    id:"rosegold", label:"🌸 Rose Gold", emoji:"🌸",
+    bg:"#0f0608", bg2:"#160a0c", bg3:"#1e0e12", bgCard:"#1e0e12",
+    border:"#3a1820", border2:"#4a2030",
+    text:"#ffe8ea", textMuted:"#c07080", textFaint:"#904858", textGhost:"#602838",
+    accent:"#f4a0aa", accentAlt:"#d06070",
+    accentGrad:"linear-gradient(135deg,#f4a0aa,#d06070)",
+    navActive:"#f4a0aa", inputBg:"#1e0e12",
+  },
+};
+
+const ThemeCtx = createContext(THEMES.golden);
+function useTheme(){ return useContext(ThemeCtx); }
 
 /* ─── Splash Screen ─────────────────────────────────────────── */
 function SplashScreen({ onDone }) {
@@ -1017,10 +1069,44 @@ function TeamView({ team, weddings, adminProfile, onConfirmHire }) {
   );
 }
 
+/* ─── Theme Picker ───────────────────────────────────────────── */
+function ThemePicker({ current, onChange, compact=false }) {
+  const [open, setOpen] = useState(false);
+  const cur = THEMES[current]||THEMES.golden;
+  return (
+    <div style={{position:"relative"}}>
+      <button
+        onClick={()=>setOpen(o=>!o)}
+        title="Change theme"
+        style={{background:"#1a1612",border:"1px solid #2a2420",borderRadius:6,padding:compact?"5px 8px":"6px 12px",cursor:"pointer",display:"flex",alignItems:"center",gap:6,fontSize:compact?14:13,color:"#7a6f63",fontFamily:"'DM Mono',monospace",whiteSpace:"nowrap"}}
+      >
+        <span style={{fontSize:compact?14:16}}>{cur.emoji}</span>
+        {!compact&&<span style={{fontSize:11}}>{cur.label}</span>}
+        <span style={{fontSize:10,opacity:0.6}}>▾</span>
+      </button>
+      {open&&(
+        <>
+          <div onClick={()=>setOpen(false)} style={{position:"fixed",inset:0,zIndex:998}}/>
+          <div style={{position:"absolute",top:"calc(100% + 6px)",right:0,background:"#111",border:"1px solid #2a2420",borderRadius:10,padding:6,zIndex:999,minWidth:180,boxShadow:"0 8px 32px #00000088",display:"flex",flexDirection:"column",gap:2}}>
+            <p style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:"#5a5048",textTransform:"uppercase",letterSpacing:"0.15em",padding:"4px 10px 6px"}}>Choose Theme</p>
+            {Object.values(THEMES).map(t=>(
+              <button key={t.id} onClick={()=>{onChange(t.id);setOpen(false);}} style={{display:"flex",alignItems:"center",gap:10,padding:"9px 12px",borderRadius:6,border:t.id===current?"1px solid "+t.accent+"66":"1px solid transparent",background:t.id===current?t.accent+"15":"transparent",cursor:"pointer",textAlign:"left",width:"100%"}}>
+                <span style={{fontSize:18}}>{t.emoji}</span>
+                <span style={{fontSize:13,fontFamily:"'Cormorant Garamond',Georgia,serif",color:t.id===current?t.accent:"#e8e0d4"}}>{t.label.replace(/^[^ ]+ /,"")}</span>
+                {t.id===current&&<span style={{marginLeft:"auto",color:t.accent,fontSize:14}}>✓</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 /* ════════════════════════════════════════════════════════════════
    ADMIN APP
 ════════════════════════════════════════════════════════════════ */
-function AdminApp({ user, onLogout }) {
+function AdminApp({ user, onLogout, theme, onThemeChange }) {
   const isMobile=useIsMobile();
   const adminId=user?.adminId||"legacy";
   const teamKey=adminId==="legacy"?"crew_team":`crew_team_${adminId}`;
@@ -1241,39 +1327,44 @@ function AdminApp({ user, onLogout }) {
 
   const NAV_ITEMS=[{id:"dashboard",icon:"◈",label:"Home"},{id:"team",icon:"◉",label:"Team"},{id:"weddings",icon:"◇",label:"Events"},{id:"calendar",icon:"▦",label:"Calendar"},{id:"profile",icon:"◎",label:"Profile"}];
 
+  const T=theme||THEMES.golden;
   const S=`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300&family=DM+Mono:wght@300;400&display=swap');
   *{box-sizing:border-box;margin:0;padding:0;}
-  ::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:#3a3028;border-radius:2px;}
-  input,select{background:#111;border:1px solid #2a2420;color:#e8e0d4;font-family:'DM Mono',monospace;font-size:14px;padding:12px 14px;border-radius:6px;outline:none;width:100%;transition:border-color 0.2s;-webkit-appearance:none;}
-  input:focus,select:focus{border-color:#c9a96e;}select option{background:#111;}
+  ::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-thumb{background:${T.border2};border-radius:2px;}
+  input,select{background:${T.inputBg};border:1px solid ${T.border2};color:${T.text};font-family:'DM Mono',monospace;font-size:14px;padding:12px 14px;border-radius:6px;outline:none;width:100%;transition:border-color 0.2s;-webkit-appearance:none;}
+  input:focus,select:focus{border-color:${T.accent};}select option{background:${T.bg3};}
   button{cursor:pointer;font-family:'Cormorant Garamond',Georgia,serif;transition:all 0.2s;}
   .tag{display:inline-block;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.08em;padding:3px 10px;border-radius:2px;text-transform:uppercase;}
   .fade-in{animation:fadeIn 0.3s ease;}@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
   .overlay{position:fixed;inset:0;background:#00000099;z-index:200;display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px);}
-  .modal{background:#111;border:1px solid #2a2420;border-radius:12px 12px 0 0;padding:28px 20px;width:100%;max-height:90vh;overflow-y:auto;}
+  .modal{background:${T.bg3};border:1px solid ${T.border2};border-radius:12px 12px 0 0;padding:28px 20px;width:100%;max-height:90vh;overflow-y:auto;}
   .modal-desktop{align-items:center;}.modal-desktop .modal{border-radius:10px;max-width:560px;}
-  .btn-gold{background:linear-gradient(135deg,#c9a96e,#a8814a);color:#0a0a0a;border:none;padding:12px 22px;font-size:15px;font-weight:600;border-radius:6px;}
-  .btn-ghost{background:transparent;color:#c9a96e;border:1px solid #c9a96e33;padding:8px 16px;font-size:13px;border-radius:4px;}
-  .btn-ghost:hover{border-color:#c9a96e;}
-  .nav-item{padding:10px 18px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;background:none;border:none;color:#7a6f63;}
-  .nav-item.active{color:#c9a96e;border-bottom:1px solid #c9a96e;}
+  .btn-gold{background:${T.accentGrad};color:${T.bg};border:none;padding:12px 22px;font-size:15px;font-weight:600;border-radius:6px;}
+  .btn-ghost{background:transparent;color:${T.accent};border:1px solid ${T.accent}33;padding:8px 16px;font-size:13px;border-radius:4px;}
+  .btn-ghost:hover{border-color:${T.accent};}
+  .nav-item{padding:10px 18px;font-size:13px;letter-spacing:0.1em;text-transform:uppercase;background:none;border:none;color:${T.textMuted};}
+  .nav-item.active{color:${T.accent};border-bottom:1px solid ${T.accent};}
   .mob-nav{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:2px;padding:8px 0;flex:1;border:none;background:none;}
-  .mob-nav.active .mob-nav-icon{color:#c9a96e;}.mob-nav.active .mob-nav-label{color:#c9a96e;}
-  .mob-nav-icon{font-size:18px;color:#3a3028;line-height:1;}
-  .mob-nav-label{font-size:9px;font-family:'DM Mono',monospace;letter-spacing:0.08em;text-transform:uppercase;color:#3a3028;margin-top:2px;}`;
+  .mob-nav.active .mob-nav-icon{color:${T.accent};}.mob-nav.active .mob-nav-label{color:${T.accent};}
+  .mob-nav-icon{font-size:18px;color:${T.textGhost};line-height:1;}
+  .mob-nav-label{font-size:9px;font-family:'DM Mono',monospace;letter-spacing:0.08em;text-transform:uppercase;color:${T.textGhost};margin-top:2px;}
+  @keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+`;
 
   const mClass=isMobile?"overlay":"overlay modal-desktop";
 
   /* ── MOBILE LAYOUT ── */
   if(isMobile) return (
-    <div style={{minHeight:"100vh",background:"#0a0a0a",fontFamily:"'Cormorant Garamond',Georgia,serif",color:"#e8e0d4",paddingBottom:70}}>
+    <div style={{minHeight:"100vh",background:T.bg2,fontFamily:"'Cormorant Garamond',Georgia,serif",color:T.text,paddingBottom:70}}>
       <style>{S}</style>
-      <div style={{background:"#0e0c0a",borderBottom:"1px solid #1e1a16",padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
+      <div style={{background:T.bg3,borderBottom:`1px solid ${T.border}`,padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
         <CrewStudioBrand small onHome={()=>setView("dashboard")}/>
-        <div style={{display:"flex",gap:10,alignItems:"center"}}>
+        <div style={{display:"flex",gap:8,alignItems:"center"}}>
           {view==="weddings"&&<button className="btn-gold" style={{padding:"8px 14px",fontSize:13}} onClick={openAddWedding}>+ Event</button>}
           {view==="team"&&<button className="btn-gold" style={{padding:"8px 14px",fontSize:13}} onClick={()=>setShowAddMember(true)}>+ Member</button>}
-          <button onClick={onLogout} style={{background:"none",border:"1px solid #2a2420",color:"#5a5048",fontSize:11,padding:"6px 10px",borderRadius:4,fontFamily:"'DM Mono',monospace"}}>↩</button>
+          <ThemePicker current={theme?.id||"golden"} onChange={onThemeChange} compact/>
+          <button onClick={onLogout} style={{background:"none",border:"1px solid #2a2420",color:"#5a5048",fontSize:11,padding:"6px 10px",borderRadius:4,fontFamily:"'DM Mono',monospace"}}>Logout</button>
         </div>
       </div>
 
@@ -1532,7 +1623,7 @@ function AdminApp({ user, onLogout }) {
       </div>
 
       {/* Bottom Nav */}
-      <div style={{position:"fixed",bottom:0,left:0,right:0,background:"#0a0a0a",borderTop:"1px solid #1e1a16",display:"flex",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)"}}>
+      <div style={{position:"fixed",bottom:0,left:0,right:0,background:T.bg3,borderTop:`1px solid ${T.border}`,display:"flex",zIndex:100,paddingBottom:"env(safe-area-inset-bottom)"}}>
         {NAV_ITEMS.map(n=>(
           <button key={n.id} className={`mob-nav ${view===n.id||view==="member-detail"&&n.id==="team"||view==="wedding-detail"&&n.id==="weddings"?"active":""}`} onClick={()=>setView(n.id)}>
             <span className="mob-nav-icon">{n.icon}</span>
@@ -1546,16 +1637,17 @@ function AdminApp({ user, onLogout }) {
 
   /* ── DESKTOP LAYOUT ── */
   return (
-    <div style={{minHeight:"100vh",background:"#0a0a0a",fontFamily:"'Cormorant Garamond',Georgia,serif",color:"#e8e0d4"}}>
+    <div style={{minHeight:"100vh",background:T.bg2,fontFamily:"'Cormorant Garamond',Georgia,serif",color:T.text}}>
       <style>{S}</style>
-      <div style={{borderBottom:"1px solid #1e1a16",padding:"0 32px",display:"flex",alignItems:"center",justifyContent:"space-between",height:64,position:"sticky",top:0,background:"#0a0a0a",zIndex:100}}>
+      <div style={{borderBottom:`1px solid ${T.border}`,padding:"0 32px",display:"flex",alignItems:"center",justifyContent:"space-between",height:64,position:"sticky",top:0,background:T.bg2,zIndex:100}}>
         <CrewStudioBrand onHome={()=>setView("dashboard")}/>
         <nav style={{display:"flex",gap:4}}>{NAV_ITEMS.map(n=><button key={n.id} className={`nav-item ${view===n.id?"active":""}`} onClick={()=>setView(n.id)}>{n.label}</button>)}</nav>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
-          <span style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:"#5a5048"}}>{user.name}</span>
+          <span style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:T.textFaint}}>{user.name}</span>
+          <ThemePicker current={theme?.id||"golden"} onChange={onThemeChange}/>
           <button className="btn-ghost" onClick={()=>setShowAddMember(true)}>+ Member</button>
           <button className="btn-gold" onClick={openAddWedding}>+ Wedding</button>
-          <button onClick={onLogout} style={{background:"none",border:"1px solid #2a2420",color:"#5a5048",fontSize:11,padding:"6px 14px",borderRadius:3,fontFamily:"'DM Mono',monospace"}}>Sign Out</button>
+          <button onClick={onLogout} style={{background:"none",border:`1px solid ${T.border2}`,color:T.textFaint,fontSize:11,padding:"6px 14px",borderRadius:3,fontFamily:"'DM Mono',monospace"}}>Sign Out</button>
         </div>
       </div>
 
@@ -2059,6 +2151,8 @@ export default function Root() {
   const hashAdminId=hash.startsWith("#team-")?hash.replace("#team-",""):"legacy";
   const [session,setSession]=useState(()=>loadState("crew_session",null));
   const [splashDone,setSplashDone]=useState(()=>sessionStorage.getItem("crew_splash_done")==="1");
+  const [themeId,setThemeId]=useState(()=>loadState("crew_theme","golden"));
+  const theme=THEMES[themeId]||THEMES.golden;
   const normalizeTeam=t=>(Array.isArray(t)?t:Object.values(t||{})).map(m=>({...m,hires:Array.isArray(m.hires)?m.hires:Object.values(m.hires||{})}));
   const teamKey=hashAdminId==="legacy"?"crew_team":`crew_team_${hashAdminId}`;
   const weddingsKey=hashAdminId==="legacy"?"crew_weddings":`crew_weddings_${hashAdminId}`;
@@ -2069,6 +2163,22 @@ export default function Root() {
   const [profileData,setProfileData]=useState(()=>loadState(profileKey,{adminName:"Krunal Prajapati",waNumber:"919876543210",studioName:"Krunalfilms"}));
 
   function handleSplashDone(){setSplashDone(true);sessionStorage.setItem("crew_splash_done","1");}
+  function handleThemeChange(id){setThemeId(id);saveState("crew_theme",id);}
+
+  // Favicon injection — works in all browsers (Chrome, Safari, mobile)
+  useEffect(()=>{
+    const svgFavicon=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#0e0c0a"/><text x="32" y="46" font-size="36" text-anchor="middle">🎬</text><rect x="8" y="52" width="48" height="3" rx="1.5" fill="#c9a96e" opacity="0.7"/></svg>`;
+    const encoded=`data:image/svg+xml,${encodeURIComponent(svgFavicon)}`;
+    // Remove existing favicons
+    document.querySelectorAll("link[rel*='icon']").forEach(el=>el.remove());
+    // Add new ones for all browsers
+    ["icon","shortcut icon","apple-touch-icon"].forEach(rel=>{
+      const link=document.createElement("link");
+      link.rel=rel; link.href=encoded; link.type="image/svg+xml";
+      document.head.appendChild(link);
+    });
+    document.title="Crew Studio";
+  },[]);
 
   useEffect(()=>{
     if(!isTeamView||!USE_FIREBASE)return;
@@ -2102,15 +2212,17 @@ export default function Root() {
 
   if(isTeamView){
     if(!portalReady) return(
+      <ThemeCtx.Provider value={theme}>
       <div style={{minHeight:"100vh",background:"#0a0a0a",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:16,fontFamily:"'DM Mono',monospace",color:"#5a5048"}}>
         <style>{`@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}`}</style>
         <div style={{width:36,height:36,border:"2px solid #2a2420",borderTopColor:"#c9a96e",borderRadius:"50%",animation:"spin 0.9s linear infinite"}}/>
         <p style={{fontSize:12,letterSpacing:"0.15em",textTransform:"uppercase"}}>Loading your schedule…</p>
       </div>
+      </ThemeCtx.Provider>
     );
-    return <TeamView team={teamData} weddings={weddingsData} adminProfile={profileData} onConfirmHire={confirmPortalHire}/>;
+    return <ThemeCtx.Provider value={theme}><TeamView team={teamData} weddings={weddingsData} adminProfile={profileData} onConfirmHire={confirmPortalHire}/></ThemeCtx.Provider>;
   }
 
-  if(!session?.loggedIn) return <AuthPage onLogin={user=>setSession(user)}/>;
-  return <AdminApp user={session} onLogout={()=>{saveState("crew_session",null);setSession(null);}}/>;
+  if(!session?.loggedIn) return <ThemeCtx.Provider value={theme}><AuthPage onLogin={user=>setSession(user)}/></ThemeCtx.Provider>;
+  return <ThemeCtx.Provider value={theme}><AdminApp user={session} theme={theme} onThemeChange={handleThemeChange} onLogout={()=>{saveState("crew_session",null);setSession(null);}}/></ThemeCtx.Provider>;
 }
