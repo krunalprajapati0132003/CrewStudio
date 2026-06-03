@@ -42,6 +42,35 @@ const FIREBASE_URL = "https://crewstudiov2-default-rtdb.asia-southeast1.firebase
 const USE_FIREBASE = true;
 
 function evColor(ev){ return EVENT_COLOR[ev]||"#c9a96e"; }
+
+/* ─── Splash Screen ─────────────────────────────────────────── */
+function SplashScreen({ onDone }) {
+  const [phase, setPhase] = useState(0); // 0=logo, 1=fade out
+  useEffect(()=>{
+    const t1=setTimeout(()=>setPhase(1), 1600);
+    const t2=setTimeout(()=>onDone(), 2200);
+    return ()=>{clearTimeout(t1);clearTimeout(t2);};
+  },[]);
+  return (
+    <div style={{position:"fixed",inset:0,background:"#060504",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",zIndex:9999,transition:"opacity 0.6s ease",opacity:phase===1?0:1,pointerEvents:"none"}}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=DM+Mono:wght@300;400&display=swap');
+        @keyframes splashLogoIn{from{opacity:0;transform:scale(0.85);}to{opacity:1;transform:scale(1);}}
+        @keyframes splashTagIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes splashLine{from{width:0;}to{width:48px;}}
+        @keyframes splashPulse{0%,100%{box-shadow:0 0 0 0 #c9a96e33;}50%{box-shadow:0 0 24px 8px #c9a96e22;}}
+      `}</style>
+      <div style={{animation:"splashLogoIn 0.7s cubic-bezier(0.34,1.56,0.64,1) both",animationDelay:"0.1s",display:"flex",flexDirection:"column",alignItems:"center",gap:20}}>
+        <div style={{width:72,height:72,borderRadius:18,background:"linear-gradient(135deg,#c9a96e,#a8814a)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:32,animation:"splashPulse 2s ease infinite",boxShadow:"0 0 0 1px #c9a96e44"}}>🎬</div>
+        <div style={{textAlign:"center",animation:"splashTagIn 0.5s ease both",animationDelay:"0.5s"}}>
+          <div style={{fontFamily:"'Cormorant Garamond',serif",fontSize:28,fontWeight:300,letterSpacing:"0.1em",color:"#e8e0d4"}}>CREW <span style={{color:"#c9a96e",fontFamily:"'DM Mono',monospace",fontSize:14,letterSpacing:"0.18em"}}>STUDIO</span></div>
+          <div style={{width:0,height:1,background:"linear-gradient(90deg,transparent,#c9a96e,transparent)",margin:"10px auto",animation:"splashLine 0.6s ease both",animationDelay:"0.9s"}}/>
+          <div style={{fontFamily:"'DM Mono',monospace",fontSize:10,color:"#5a5048",letterSpacing:"0.18em",textTransform:"uppercase",animation:"splashTagIn 0.5s ease both",animationDelay:"1.1s"}}>Wedding Crew Management</div>
+        </div>
+      </div>
+    </div>
+  );
+}
 function hireBelongsToWedding(hire, wedding) {
   if (!hire || !wedding) return false;
   return hire.weddingId != null ? String(hire.weddingId) === String(wedding.id) : hire.wedding === wedding.name;
@@ -110,9 +139,9 @@ function RoleSelect({ value, onChange }) {
   );
 }
 
-function CrewStudioBrand({ small=false, portal=false }) {
+function CrewStudioBrand({ small=false, portal=false, onHome=null }) {
   return (
-    <div style={{display:"flex",alignItems:"center",gap:small?8:10}}>
+    <div onClick={onHome||undefined} style={{display:"flex",alignItems:"center",gap:small?8:10,cursor:onHome?"pointer":"default"}}>
       <img src={`${process.env.PUBLIC_URL}/crewstudio-logo.svg`} alt="CrewStudio logo" style={{width:small?28:36,height:small?28:36,borderRadius:small?7:9,objectFit:"cover",boxShadow:"0 0 0 1px #c9a96e33"}}/>
       <div style={{display:"flex",alignItems:"baseline",gap:small?6:8}}>
         <span style={{fontSize:small?18:22,fontWeight:300,letterSpacing:"0.06em"}}>CREW</span>
@@ -299,134 +328,190 @@ function MiniCalendar({ selectedDates, onToggleDate, bookedMap }) {
   );
 }
 
-/* ─── Event Assigner with Time & Crew Slots (Features 1 & 8) ── */
+/* ─── Event Assigner with Time, Crew Slots, Location & Multi-Event (Features 1, 8, 9) ── */
 function EventAssigner({ selectedDates, eventDays, setEventDays, team, weddingName, eventType }) {
-  const [assigningDate,setAssigningDate]=useState(null);
-  const [customInputDate,setCustomInputDate]=useState(null);
+  const [openDate,setOpenDate]=useState(null);
+  const [customInputKey,setCustomInputKey]=useState(null);
   const [customText,setCustomText]=useState("");
-
-  function assignEvent(date, event) {
-    setEventDays(prev=>{
-      const rest=prev.filter(ed=>ed.date!==date);
-      if(!event) return rest;
-      const existing=prev.find(ed=>ed.date===date)||{};
-      return [...rest,{...existing,date,event}].sort((a,b)=>a.date.localeCompare(b.date));
-    });
-    setAssigningDate(null); setCustomInputDate(null); setCustomText("");
-  }
-
-  function updateEventField(date, field, value) {
-    setEventDays(prev=>prev.map(ed=>ed.date===date?{...ed,[field]:value}:ed));
-  }
-
-  // Add/remove crew slot requirements (Feature 8)
-  function addCrewSlot(date) {
-    setEventDays(prev=>prev.map(ed=>ed.date===date?{...ed,crewSlots:[...(ed.crewSlots||[]),{id:Date.now(),role:"photographer",assignedMemberId:null}]}:ed));
-  }
-  function removeCrewSlot(date, slotId) {
-    setEventDays(prev=>prev.map(ed=>ed.date===date?{...ed,crewSlots:(ed.crewSlots||[]).filter(s=>s.id!==slotId)}:ed));
-  }
-  function updateCrewSlot(date, slotId, field, value) {
-    setEventDays(prev=>prev.map(ed=>ed.date===date?{...ed,crewSlots:(ed.crewSlots||[]).map(s=>s.id===slotId?{...s,[field]:value}:s)}:ed));
-  }
+  const [quickHireKey,setQuickHireKey]=useState(null); // "date|event" key for inline hire
+  const [quickHireForm,setQuickHireForm]=useState({memberId:"",dayType:"Full Day",hireRole:ROLES[0],status:"Pending"});
 
   const typeObj = EVENT_TYPES.find(et=>et.id===(eventType||"wedding"));
   const QUICK_EVENTS = typeObj?.subEvents?.length>0 ? typeObj.subEvents : ["Mehndi","Sangeet","Haldi","Wedding Ceremony","Reception","Pre-Wedding Shoot","Engagement","Tilak","Ring Ceremony","Garba Night","Cocktail Party","Baby Shower","Birthday","Corporate Event"];
 
+  // Get all events for a given date
+  function eventsForDate(date){ return eventDays.filter(ed=>ed.date===date); }
+
+  function addEvent(date, event) {
+    if(!event) return;
+    setEventDays(prev=>{
+      // Allow multiple events per date — each date+event combo is unique
+      const exists=prev.find(ed=>ed.date===date&&ed.event===event);
+      if(exists) return prev;
+      return [...prev,{date,event,startTime:"",endTime:"",crewSlots:[],location:"",side:"both"}].sort((a,b)=>a.date.localeCompare(b.date)||a.event.localeCompare(b.event));
+    });
+    setCustomInputKey(null);setCustomText("");
+  }
+
+  function removeEvent(date, event) {
+    setEventDays(prev=>prev.filter(ed=>!(ed.date===date&&ed.event===event)));
+  }
+
+  function updateEventField(date, event, field, value) {
+    setEventDays(prev=>prev.map(ed=>ed.date===date&&ed.event===event?{...ed,[field]:value}:ed));
+  }
+
+  function addCrewSlot(date, event) {
+    setEventDays(prev=>prev.map(ed=>ed.date===date&&ed.event===event?{...ed,crewSlots:[...(ed.crewSlots||[]),{id:Date.now(),role:"photographer",assignedMemberId:null}]}:ed));
+  }
+  function removeCrewSlot(date, event, slotId) {
+    setEventDays(prev=>prev.map(ed=>ed.date===date&&ed.event===event?{...ed,crewSlots:(ed.crewSlots||[]).filter(s=>s.id!==slotId)}:ed));
+  }
+  function updateCrewSlot(date, event, slotId, field, value) {
+    setEventDays(prev=>prev.map(ed=>ed.date===date&&ed.event===event?{...ed,crewSlots:(ed.crewSlots||[]).map(s=>s.id===slotId?{...s,[field]:value}:s)}:ed));
+  }
+
   return (
     <div>
-      <p style={{fontSize:10,fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em",color:"#5a5048",textTransform:"uppercase",marginBottom:8}}>Assign Event to Each Day</p>
+      <p style={{fontSize:10,fontFamily:"'DM Mono',monospace",letterSpacing:"0.1em",color:"#5a5048",textTransform:"uppercase",marginBottom:8}}>Assign Events to Each Day</p>
       {selectedDates.map(date=>{
-        const assigned=eventDays.find(ed=>ed.date===date);
-        const isOpen=assigningDate===date;
-        const slots=assigned?.crewSlots||[];
-        const totalSlots=slots.length;
-        const filledSlots=slots.filter(s=>s.assignedMemberId).length;
+        const dayEvents=eventsForDate(date);
+        const isOpen=openDate===date;
         return (
-          <div key={date} style={{background:"#0e0c0a",border:`1px solid ${assigned?"#2a2420":"#1e1a16"}`,borderRadius:6,marginBottom:8,overflow:"hidden"}}>
+          <div key={date} style={{background:"#0e0c0a",border:"1px solid #2a2420",borderRadius:6,marginBottom:8,overflow:"hidden"}}>
+            {/* Date header */}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px"}}>
-              <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"#c9a96e"}}>{date}</span>
-              <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                {assigned&&<span style={{fontSize:10,fontFamily:"'DM Mono',monospace",background:evColor(assigned.event)+"22",color:evColor(assigned.event),border:`1px solid ${evColor(assigned.event)}44`,padding:"3px 8px",borderRadius:2}}>{assigned.event}</span>}
-                {/* Crew slot summary */}
-                {totalSlots>0&&<span style={{fontSize:10,fontFamily:"'DM Mono',monospace",background:"#c9a96e11",color:"#c9a96e66",padding:"2px 7px",borderRadius:2}}>{filledSlots}/{totalSlots} crew</span>}
-                {isOpen
-                  ?<button onClick={()=>{setAssigningDate(null);setCustomInputDate(null);setCustomText("");}} style={{background:"none",border:"none",color:"#5a5048",fontSize:20,lineHeight:1}}>×</button>
-                  :<button onClick={()=>setAssigningDate(date)} style={{background:"#1a1612",border:"1px solid #2a2420",color:"#7a6f63",fontSize:11,padding:"5px 12px",borderRadius:3,fontFamily:"'DM Mono',monospace"}}>{assigned?"Edit":"Assign +"}</button>
-                }
+              <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                <span style={{fontFamily:"'DM Mono',monospace",fontSize:12,color:"#c9a96e"}}>{date}</span>
+                {dayEvents.map(ed=>(
+                  <span key={ed.event} style={{fontSize:10,fontFamily:"'DM Mono',monospace",background:evColor(ed.event)+"22",color:evColor(ed.event),border:`1px solid ${evColor(ed.event)}44`,padding:"2px 8px",borderRadius:2,display:"inline-flex",alignItems:"center",gap:4}}>
+                    {ed.side==="bride"?"👰":(ed.side==="groom"?"🤵":"")} {ed.event}
+                    {ed.location&&<span style={{color:"#60a5fa",fontSize:9}}>📍</span>}
+                  </span>
+                ))}
+                {dayEvents.length>0&&<span style={{fontSize:10,color:"#5a5048",fontFamily:"'DM Mono',monospace"}}>{dayEvents.length} event{dayEvents.length>1?"s":""}</span>}
               </div>
+              <button onClick={()=>setOpenDate(isOpen?null:date)} style={{background:"#1a1612",border:"1px solid #2a2420",color:"#7a6f63",fontSize:11,padding:"5px 12px",borderRadius:3,fontFamily:"'DM Mono',monospace"}}>{isOpen?"Done ✓":`${dayEvents.length?"Edit":"Add"} Event +`}</button>
             </div>
 
             {isOpen&&(
               <div style={{borderTop:"1px solid #1e1a16",background:"#080806",padding:"14px"}}>
-                {/* Quick event buttons */}
-                <p style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:"#3a3028",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:10}}>Quick Select</p>
-                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:14}}>
-                  {QUICK_EVENTS.map(ev=>(
-                    <button key={ev} onClick={()=>assignEvent(date,ev)} style={{background:assigned?.event===ev?evColor(ev)+"44":evColor(ev)+"18",border:`1px solid ${assigned?.event===ev?evColor(ev):evColor(ev)+"44"}`,color:evColor(ev),fontSize:11,padding:"6px 12px",borderRadius:3,fontFamily:"'DM Mono',monospace",fontWeight:assigned?.event===ev?"600":"400"}}>{ev}</button>
-                  ))}
-                </div>
-
-                {/* Custom name */}
-                <p style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:"#3a3028",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Custom Event Name</p>
-                {customInputDate===date
-                  ?<div style={{display:"flex",gap:8,marginBottom:14}}>
-                    <input autoFocus placeholder="e.g. Farewell Party, Pooja…" value={customText} onChange={e=>setCustomText(e.target.value)} onKeyDown={e=>e.key==="Enter"&&customText.trim()&&assignEvent(date,customText.trim())} style={{flex:1,background:"#111",border:"1px solid #c9a96e55",color:"#e8e0d4",fontFamily:"'DM Mono',monospace",fontSize:13,padding:"9px 12px",borderRadius:4,outline:"none"}}/>
-                    <button onClick={()=>customText.trim()&&assignEvent(date,customText.trim())} style={{background:"linear-gradient(135deg,#c9a96e,#a8814a)",color:"#0a0a0a",border:"none",padding:"9px 16px",borderRadius:4,fontSize:13,fontWeight:600,fontFamily:"'DM Mono',monospace"}}>Add</button>
-                    <button onClick={()=>{setCustomInputDate(null);setCustomText("");}} style={{background:"none",border:"1px solid #2a2420",color:"#5a5048",padding:"9px 12px",borderRadius:4}}>✕</button>
-                  </div>
-                  :<button onClick={()=>setCustomInputDate(date)} style={{background:"#1a1612",border:"1px dashed #3a3028",color:"#5a5048",fontSize:11,padding:"8px 14px",borderRadius:3,fontFamily:"'DM Mono',monospace",width:"100%",textAlign:"left",marginBottom:14}}>＋ Type custom event name…</button>
-                }
-
-                {/* FEATURE 1: Time fields */}
-                {assigned&&<>
-                  <p style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:"#3a3028",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Event Time</p>
-                  <div style={{display:"flex",gap:8,marginBottom:14}}>
-                    <div style={{flex:1}}>
-                      <label style={{fontSize:9,color:"#5a5048",fontFamily:"'DM Mono',monospace",display:"block",marginBottom:4}}>START TIME</label>
-                      <input type="time" value={assigned.startTime||""} onChange={e=>updateEventField(date,"startTime",e.target.value)} style={{background:"#111",border:"1px solid #2a2420",color:"#e8e0d4",fontFamily:"'DM Mono',monospace",fontSize:13,padding:"8px 10px",borderRadius:4,outline:"none",width:"100%"}}/>
-                    </div>
-                    <div style={{flex:1}}>
-                      <label style={{fontSize:9,color:"#5a5048",fontFamily:"'DM Mono',monospace",display:"block",marginBottom:4}}>END TIME</label>
-                      <input type="time" value={assigned.endTime||""} onChange={e=>updateEventField(date,"endTime",e.target.value)} style={{background:"#111",border:"1px solid #2a2420",color:"#e8e0d4",fontFamily:"'DM Mono',monospace",fontSize:13,padding:"8px 10px",borderRadius:4,outline:"none",width:"100%"}}/>
-                    </div>
-                  </div>
-                </>}
-
-                {/* FEATURE 8: Crew Slot Requirements */}
-                {assigned&&<>
-                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-                    <p style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:"#3a3028",textTransform:"uppercase",letterSpacing:"0.1em"}}>Crew Requirements ({slots.length} slots)</p>
-                    <button onClick={()=>addCrewSlot(date)} style={{background:"#c9a96e22",border:"1px solid #c9a96e44",color:"#c9a96e",fontSize:10,padding:"3px 10px",borderRadius:3,fontFamily:"'DM Mono',monospace"}}>+ Add Slot</button>
-                  </div>
-                  {slots.length===0&&<p style={{fontSize:11,color:"#3a3028",fontFamily:"'DM Mono',monospace",marginBottom:8,padding:"8px 12px",background:"#0a0a0a",borderRadius:4,border:"1px dashed #1e1a16"}}>No crew slots yet — add slots to track how many crew members you need.</p>}
-                  {slots.map((slot,si)=>{
-                    const roleInfo=CREW_SLOT_ROLES.find(r=>r.id===slot.role)||CREW_SLOT_ROLES[0];
-                    const assignedMember=team.find(m=>m.id===slot.assignedMemberId);
+                {/* Existing events for this date */}
+                {dayEvents.length>0&&<div style={{marginBottom:14}}>
+                  <p style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:"#3a3028",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Events on {date}</p>
+                  {dayEvents.map(ed=>{
+                    const slots=ed.crewSlots||[];
+                    const filledSlots=slots.filter(s=>s.assignedMemberId).length;
+                    const qKey=`${date}|${ed.event}`;
                     return (
-                      <div key={slot.id} style={{background:"#0a0a0a",border:`1px solid ${slot.assignedMemberId?"#c9a96e33":"#1e1a16"}`,borderRadius:5,padding:"10px 12px",marginBottom:6,display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
-                        <span style={{fontSize:16}}>{roleInfo.emoji}</span>
-                        <select value={slot.role} onChange={e=>updateCrewSlot(date,slot.id,"role",e.target.value)} style={{background:"#111",border:"1px solid #2a2420",color:roleInfo.color,fontFamily:"'DM Mono',monospace",fontSize:11,padding:"5px 8px",borderRadius:3,outline:"none",flex:1}}>
-                          {CREW_SLOT_ROLES.map(r=><option key={r.id} value={r.id}>{r.emoji} {r.label}</option>)}
-                        </select>
-                        <select value={slot.assignedMemberId||""} onChange={e=>updateCrewSlot(date,slot.id,"assignedMemberId",e.target.value?Number(e.target.value):null)} style={{background:"#111",border:"1px solid #2a2420",color:slot.assignedMemberId?"#c9a96e":"#5a5048",fontFamily:"'DM Mono',monospace",fontSize:11,padding:"5px 8px",borderRadius:3,outline:"none",flex:1}}>
-                          <option value="">— Unassigned —</option>
-                          {team.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
-                        </select>
-                        <button onClick={()=>removeCrewSlot(date,slot.id)} style={{background:"none",border:"none",color:"#3a3028",fontSize:16,padding:"2px 4px"}}>×</button>
+                      <div key={ed.event} style={{background:"#0e0c0a",border:`1px solid ${evColor(ed.event)}44`,borderLeft:`3px solid ${evColor(ed.event)}`,borderRadius:5,padding:"12px",marginBottom:10}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                          <span style={{fontSize:13,color:evColor(ed.event),fontFamily:"'DM Mono',monospace"}}>{ed.event}</span>
+                          <button onClick={()=>removeEvent(date,ed.event)} style={{background:"none",border:"none",color:"#f87171",fontSize:16,padding:"0 4px",cursor:"pointer"}}>×</button>
+                        </div>
+
+                        {/* Location per event */}
+                        <div style={{marginBottom:8}}>
+                          <label style={{fontSize:9,color:"#5a5048",fontFamily:"'DM Mono',monospace",display:"block",marginBottom:4,textTransform:"uppercase"}}>📍 Venue / Location</label>
+                          <input placeholder="e.g. Rajmahal Banquet Hall, Ahmedabad" value={ed.location||""} onChange={e=>updateEventField(date,ed.event,"location",e.target.value)} style={{background:"#111",border:"1px solid #2a2420",color:"#e8e0d4",fontFamily:"'DM Mono',monospace",fontSize:12,padding:"8px 10px",borderRadius:4,outline:"none",width:"100%"}}/>
+                        </div>
+
+                        {/* Bride / Groom / Both side */}
+                        <div style={{marginBottom:8}}>
+                          <label style={{fontSize:9,color:"#5a5048",fontFamily:"'DM Mono',monospace",display:"block",marginBottom:6,textTransform:"uppercase"}}>Coverage Side</label>
+                          <div style={{display:"flex",gap:6}}>
+                            {[{v:"both",l:"👥 Both",c:"#c9a96e"},{v:"bride",l:"👰 Bride",c:"#f472b6"},{v:"groom",l:"🤵 Groom",c:"#60a5fa"}].map(({v,l,c})=>(
+                              <button key={v} onClick={()=>updateEventField(date,ed.event,"side",v)} style={{flex:1,padding:"6px",borderRadius:3,border:`1px solid ${ed.side===v?c:"#2a2420"}`,background:ed.side===v?c+"22":"#0a0a0a",color:ed.side===v?c:"#5a5048",fontSize:11,fontFamily:"'DM Mono',monospace",cursor:"pointer"}}>{l}</button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Time */}
+                        <div style={{display:"flex",gap:8,marginBottom:8}}>
+                          <div style={{flex:1}}>
+                            <label style={{fontSize:9,color:"#5a5048",fontFamily:"'DM Mono',monospace",display:"block",marginBottom:4,textTransform:"uppercase"}}>Start</label>
+                            <input type="time" value={ed.startTime||""} onChange={e=>updateEventField(date,ed.event,"startTime",e.target.value)} style={{background:"#111",border:"1px solid #2a2420",color:"#e8e0d4",fontFamily:"'DM Mono',monospace",fontSize:12,padding:"6px 8px",borderRadius:3,outline:"none",width:"100%"}}/>
+                          </div>
+                          <div style={{flex:1}}>
+                            <label style={{fontSize:9,color:"#5a5048",fontFamily:"'DM Mono',monospace",display:"block",marginBottom:4,textTransform:"uppercase"}}>End</label>
+                            <input type="time" value={ed.endTime||""} onChange={e=>updateEventField(date,ed.event,"endTime",e.target.value)} style={{background:"#111",border:"1px solid #2a2420",color:"#e8e0d4",fontFamily:"'DM Mono',monospace",fontSize:12,padding:"6px 8px",borderRadius:3,outline:"none",width:"100%"}}/>
+                          </div>
+                        </div>
+
+                        {/* Crew Slots */}
+                        <div style={{marginBottom:8}}>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:6}}>
+                            <p style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:"#3a3028",textTransform:"uppercase",letterSpacing:"0.1em"}}>Crew Slots ({filledSlots}/{slots.length})</p>
+                            <button onClick={()=>addCrewSlot(date,ed.event)} style={{background:"#c9a96e22",border:"1px solid #c9a96e44",color:"#c9a96e",fontSize:10,padding:"3px 10px",borderRadius:3,fontFamily:"'DM Mono',monospace",cursor:"pointer"}}>+ Slot</button>
+                          </div>
+                          {slots.map((slot,si)=>{
+                            const roleInfo=CREW_SLOT_ROLES.find(r=>r.id===slot.role)||CREW_SLOT_ROLES[0];
+                            const assignedMember=team.find(m=>m.id===slot.assignedMemberId);
+                            return (
+                              <div key={slot.id} style={{background:"#0a0a0a",border:`1px solid ${slot.assignedMemberId?"#c9a96e33":"#1e1a16"}`,borderRadius:4,padding:"8px 10px",marginBottom:5,display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                                <span style={{fontSize:14}}>{roleInfo.emoji}</span>
+                                <select value={slot.role} onChange={e=>updateCrewSlot(date,ed.event,slot.id,"role",e.target.value)} style={{background:"#111",border:"1px solid #2a2420",color:roleInfo.color,fontFamily:"'DM Mono',monospace",fontSize:11,padding:"4px 6px",borderRadius:3,outline:"none",flex:1}}>
+                                  {CREW_SLOT_ROLES.map(r=><option key={r.id} value={r.id}>{r.emoji} {r.label}</option>)}
+                                </select>
+                                <select value={slot.assignedMemberId||""} onChange={e=>updateCrewSlot(date,ed.event,slot.id,"assignedMemberId",e.target.value?Number(e.target.value):null)} style={{background:"#111",border:"1px solid #2a2420",color:slot.assignedMemberId?"#c9a96e":"#5a5048",fontFamily:"'DM Mono',monospace",fontSize:11,padding:"4px 6px",borderRadius:3,outline:"none",flex:1}}>
+                                  <option value="">— Unassigned —</option>
+                                  {team.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}
+                                </select>
+                                <button onClick={()=>removeCrewSlot(date,ed.event,slot.id)} style={{background:"none",border:"none",color:"#3a3028",fontSize:16,padding:"2px 4px",cursor:"pointer"}}>×</button>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Quick Hire directly from event */}
+                        {quickHireKey===qKey?(
+                          <div style={{background:"#c9a96e11",border:"1px solid #c9a96e33",borderRadius:4,padding:"10px"}}>
+                            <p style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:"#c9a96e",textTransform:"uppercase",marginBottom:8}}>Quick Hire for {ed.event}</p>
+                            <select value={quickHireForm.memberId} onChange={e=>setQuickHireForm(f=>({...f,memberId:e.target.value}))} style={{background:"#111",border:"1px solid #2a2420",color:"#e8e0d4",fontFamily:"'DM Mono',monospace",fontSize:12,padding:"7px",borderRadius:3,outline:"none",width:"100%",marginBottom:6}}>
+                              <option value="">Select Team Member</option>
+                              {team.map(m=><option key={m.id} value={m.id}>{m.name} — {m.role}</option>)}
+                            </select>
+                            <div style={{display:"flex",gap:6,marginBottom:6}}>
+                              {["Full Day","Half Day"].map(dt=><button key={dt} onClick={()=>setQuickHireForm(f=>({...f,dayType:dt}))} style={{flex:1,padding:"6px",borderRadius:3,border:`1px solid ${quickHireForm.dayType===dt?"#c9a96e":"#2a2420"}`,background:quickHireForm.dayType===dt?"#c9a96e22":"#0e0c0a",color:quickHireForm.dayType===dt?"#c9a96e":"#5a5048",fontSize:11,fontFamily:"'DM Mono',monospace",cursor:"pointer"}}>{dt}</button>)}
+                            </div>
+                            <select value={quickHireForm.hireRole} onChange={e=>setQuickHireForm(f=>({...f,hireRole:e.target.value}))} style={{background:"#111",border:"1px solid #2a2420",color:"#e8e0d4",fontFamily:"'DM Mono',monospace",fontSize:12,padding:"7px",borderRadius:3,outline:"none",width:"100%",marginBottom:8}}>
+                              {ROLES.map(r=><option key={r}>{r}</option>)}
+                            </select>
+                            <div style={{display:"flex",gap:6}}>
+                              <button onClick={()=>{
+                                if(!quickHireForm.memberId)return;
+                                const hire={wedding:weddingName||"",weddingId:null,event:ed.event,date,status:quickHireForm.status,dayType:quickHireForm.dayType,hireRole:quickHireForm.hireRole,paid:false,startTime:ed.startTime||"",endTime:ed.endTime||""};
+                                // This will be picked up by the parent via eventDays
+                                // Store memberId in slot so parent can sync
+                                setEventDays(prev=>prev.map(e=>e.date===date&&e.event===ed.event?{...e,_quickHire:{...hire,memberId:Number(quickHireForm.memberId)}}:e));
+                                setQuickHireKey(null);
+                              }} style={{flex:1,background:"linear-gradient(135deg,#c9a96e,#a8814a)",color:"#0a0a0a",border:"none",padding:"8px",borderRadius:3,fontSize:12,fontWeight:600,fontFamily:"'DM Mono',monospace",cursor:"pointer"}}>Hire ✓</button>
+                              <button onClick={()=>setQuickHireKey(null)} style={{background:"none",border:"1px solid #2a2420",color:"#5a5048",padding:"8px 12px",borderRadius:3,cursor:"pointer"}}>Cancel</button>
+                            </div>
+                          </div>
+                        ):(
+                          <button onClick={()=>{setQuickHireKey(qKey);setQuickHireForm({memberId:"",dayType:"Full Day",hireRole:ROLES[0],status:"Pending"});}} style={{background:"#1a1612",border:"1px dashed #c9a96e44",color:"#c9a96e88",fontSize:11,padding:"6px",borderRadius:3,fontFamily:"'DM Mono',monospace",width:"100%",textAlign:"center",cursor:"pointer"}}>⚡ Quick Hire for this Event</button>
+                        )}
                       </div>
                     );
                   })}
-                  {/* Slot summary */}
-                  {slots.length>0&&<div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:4,marginTop:4}}>
-                    {CREW_SLOT_ROLES.filter(r=>slots.some(s=>s.role===r.id)).map(r=>{
-                      const count=slots.filter(s=>s.role===r.id).length;
-                      return <span key={r.id} style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:r.color,background:r.color+"15",border:`1px solid ${r.color}33`,padding:"2px 8px",borderRadius:2}}>{count}× {r.label}</span>;
-                    })}
-                  </div>}
-                </>}
+                </div>}
 
-                {assigned&&<button onClick={()=>assignEvent(date,null)} style={{marginTop:8,background:"none",border:"none",color:"#f87171",fontSize:11,fontFamily:"'DM Mono',monospace",padding:0,display:"block"}}>✕ Remove assignment</button>}
+                {/* Add new event for this date */}
+                <p style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:"#3a3028",textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:8}}>Add Event to {date}</p>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
+                  {QUICK_EVENTS.filter(ev=>!dayEvents.find(ed=>ed.event===ev)).map(ev=>(
+                    <button key={ev} onClick={()=>addEvent(date,ev)} style={{background:evColor(ev)+"18",border:`1px solid ${evColor(ev)}44`,color:evColor(ev),fontSize:11,padding:"6px 12px",borderRadius:3,fontFamily:"'DM Mono',monospace",cursor:"pointer"}}>{ev}</button>
+                  ))}
+                </div>
+                {customInputKey===date
+                  ?<div style={{display:"flex",gap:8,marginBottom:8}}>
+                    <input autoFocus placeholder="e.g. Farewell Pooja…" value={customText} onChange={e=>setCustomText(e.target.value)} onKeyDown={e=>e.key==="Enter"&&customText.trim()&&addEvent(date,customText.trim())} style={{flex:1,background:"#111",border:"1px solid #c9a96e55",color:"#e8e0d4",fontFamily:"'DM Mono',monospace",fontSize:13,padding:"9px 12px",borderRadius:4,outline:"none"}}/>
+                    <button onClick={()=>customText.trim()&&addEvent(date,customText.trim())} style={{background:"linear-gradient(135deg,#c9a96e,#a8814a)",color:"#0a0a0a",border:"none",padding:"9px 16px",borderRadius:4,fontSize:13,fontWeight:600,fontFamily:"'DM Mono',monospace",cursor:"pointer"}}>Add</button>
+                    <button onClick={()=>{setCustomInputKey(null);setCustomText("");}} style={{background:"none",border:"1px solid #2a2420",color:"#5a5048",padding:"9px 12px",borderRadius:4,cursor:"pointer"}}>✕</button>
+                  </div>
+                  :<button onClick={()=>setCustomInputKey(date)} style={{background:"#1a1612",border:"1px dashed #3a3028",color:"#5a5048",fontSize:11,padding:"8px 14px",borderRadius:3,fontFamily:"'DM Mono',monospace",width:"100%",textAlign:"left",cursor:"pointer"}}>＋ Type custom event name…</button>
+                }
               </div>
             )}
           </div>
@@ -532,7 +617,7 @@ function TeamCalendar({ myHires, weddings, team, myName }) {
     const list=[];
     weddings.forEach(w=>(w.eventDays||[]).forEach(ed=>{
       const [ey,em]=ed.date.split("-").map(Number);
-      if(ey===y&&em===mo+1){const myHire=myHires.find(h=>hireMatchesEvent(h,w,ed.date,ed.event));const allCrew=team.filter(m=>m.hires.some(h=>hireMatchesEvent(h,w,ed.date)));list.push({date:ed.date,event:ed.event,startTime:ed.startTime,endTime:ed.endTime,weddingName:w.name,wedding:w,myHire,allCrew});}
+      if(ey===y&&em===mo+1){const myHire=myHires.find(h=>hireMatchesEvent(h,w,ed.date,ed.event));const allCrew=team.filter(m=>m.hires.some(h=>hireMatchesEvent(h,w,ed.date,ed.event)));list.push({date:ed.date,event:ed.event,startTime:ed.startTime,endTime:ed.endTime,weddingName:w.name,wedding:w,myHire,allCrew,eventLocation:ed.location,side:ed.side});}
     }));
     return list.sort((a,b)=>a.date.localeCompare(b.date));
   },[weddings,team,myHires,y,mo]);
@@ -610,6 +695,9 @@ function TeamEventCard({ e, myName }) {
               }
             </div>
           )}
+          {/* Per-event location */}
+          {e.eventLocation&&<div style={{marginTop:2,fontSize:11,color:"#60a5fa",fontFamily:"'DM Mono',monospace"}}>📍 {e.eventLocation}</div>}
+          {e.side&&e.side!=="both"&&<div style={{marginTop:2,fontSize:10,fontFamily:"'DM Mono',monospace",color:"#c9a96e"}}>{e.side==="bride"?"👰 Bride Side":"🤵 Groom Side"}</div>}
         </div>
         <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
           {e.myHire&&<span style={{background:(STATUS_COLOR[e.myHire.status]||"#fbbf24")+"22",color:STATUS_COLOR[e.myHire.status]||"#fbbf24",border:`1px solid ${STATUS_COLOR[e.myHire.status]||"#fbbf24"}44`,padding:"3px 10px",borderRadius:2,fontSize:10,fontFamily:"'DM Mono',monospace",textTransform:"uppercase"}}>{e.myHire.status||"Pending"}</span>}
@@ -1033,7 +1121,7 @@ function AdminApp({ user, onLogout }) {
         const roleInfo=CREW_SLOT_ROLES.find(r=>r.id===slot.role);
         return {
           memberId:Number(slot.assignedMemberId),
-          key:`${ed.date}|${slot.id}`,
+          key:`${ed.date}|${ed.event}|${slot.id}`,
           hire:{
             wedding:wedding.name,
             weddingId:wedding.id,
@@ -1057,9 +1145,9 @@ function AdminApp({ user, onLogout }) {
       let hires=(member.hires||[]).map(h=>{
         const sameWedding=hireBelongsToWedding(h,wedding)||(previousName&&h.wedding===previousName);
         return sameWedding?{...h,wedding:wedding.name,weddingId:wedding.id}:h;
-      }).filter(h=>!(h.source==="slot"&&hireBelongsToWedding(h,wedding)&&!mySlotKeys.has(`${h.date}|${h.slotId}`)));
+      }).filter(h=>!(h.source==="slot"&&hireBelongsToWedding(h,wedding)&&!mySlotKeys.has(`${h.date}|${h.event}|${h.slotId}`)));
       mySlots.forEach(({key,hire})=>{
-        const existingIndex=hires.findIndex(h=>h.source==="slot"&&hireBelongsToWedding(h,wedding)&&`${h.date}|${h.slotId}`===key);
+        const existingIndex=hires.findIndex(h=>h.source==="slot"&&hireBelongsToWedding(h,wedding)&&`${h.date}|${h.event}|${h.slotId}`===key);
         if(existingIndex>=0) hires[existingIndex]={...hires[existingIndex],...hire,status:hires[existingIndex].status||"Pending",paid:hires[existingIndex].paid||false};
         else hires.push(hire);
       });
@@ -1069,18 +1157,39 @@ function AdminApp({ user, onLogout }) {
   function saveWedding(){
     if(!wForm.name)return;
     const eventId=editWedding?.id||Date.now();
-    const nextWedding={...(editWedding||{}),...wForm,id:eventId,adminStudio:profile.studioName||profile.adminName||"",adminLogo:profile.studioLogo||""};
+    // Process _quickHire: extract and apply to team, then strip from eventDays
+    const cleanEventDays=wForm.eventDays.map(ed=>{
+      const {_quickHire,...rest}=ed;
+      return rest;
+    });
+    const quickHires=wForm.eventDays.filter(ed=>ed._quickHire).map(ed=>({...ed._quickHire,weddingId:eventId,wedding:wForm.name}));
+    const nextWedding={...(editWedding||{}),...wForm,eventDays:cleanEventDays,id:eventId,adminStudio:profile.studioName||profile.adminName||"",adminLogo:profile.studioLogo||""};
     if(editWedding){
-      // FEATURE 4: Preserve hires — don't reset them on edit
       setWeddings(weddings.map(w=>w.id===editWedding.id?nextWedding:w));
     }else{
       setWeddings([...weddings,nextWedding]);
     }
     syncSlotBookings(nextWedding,editWedding?.name);
+    // Apply quick hires to team
+    if(quickHires.length>0){
+      setTeam(prev=>prev.map(member=>{
+        const myQuick=quickHires.filter(h=>h.memberId===member.id);
+        if(!myQuick.length) return member;
+        const newHires=myQuick.map(h=>({wedding:h.wedding,weddingId:h.weddingId,event:h.event,date:h.date,status:h.status,dayType:h.dayType,hireRole:h.hireRole,paid:false,startTime:h.startTime||"",endTime:h.endTime||""}));
+        return {...member,hires:[...member.hires,...newHires]};
+      }));
+    }
     setSelectedWedding(nextWedding);
     setShowAddWedding(false);
   }
-  function removeWedding(id){setWeddings(weddings.filter(w=>w.id!==id));}
+  function removeWedding(id){
+    const wedding=weddings.find(w=>w.id===id);
+    setWeddings(weddings.filter(w=>w.id!==id));
+    if(wedding){
+      // Also remove all hires for this wedding from all team members
+      setTeam(team.map(m=>({...m,hires:(m.hires||[]).filter(h=>!hireBelongsToWedding(h,wedding))})));
+    }
+  }
   function addMember(){if(!newMember.name)return;setTeam([...team,{id:Date.now(),...newMember,rate:Number(newMember.rate),hires:[]}]);setNewMember({name:"",role:ROLES[0],phone:"",rate:"",portalPass:""});setShowAddMember(false);}
   function saveEditMember(){const pp=editForm.portalPass||editMember?.portalPass||"";setTeam(team.map(m=>m.id===editMember.id?{...m,...editForm,rate:Number(editForm.rate),portalPass:pp}:m));setEditMember(null);}
   function removeMember(id){setTeam(team.filter(m=>m.id!==id));}
@@ -1155,7 +1264,7 @@ function AdminApp({ user, onLogout }) {
     <div style={{minHeight:"100vh",background:"#0a0a0a",fontFamily:"'Cormorant Garamond',Georgia,serif",color:"#e8e0d4",paddingBottom:70}}>
       <style>{S}</style>
       <div style={{background:"#0e0c0a",borderBottom:"1px solid #1e1a16",padding:"14px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100}}>
-        <CrewStudioBrand small/>
+        <CrewStudioBrand small onHome={()=>setView("dashboard")}/>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
           {view==="weddings"&&<button className="btn-gold" style={{padding:"8px 14px",fontSize:13}} onClick={openAddWedding}>+ Event</button>}
           {view==="team"&&<button className="btn-gold" style={{padding:"8px 14px",fontSize:13}} onClick={()=>setShowAddMember(true)}>+ Member</button>}
@@ -1169,6 +1278,12 @@ function AdminApp({ user, onLogout }) {
           <div className="fade-in">
             <p style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#5a5048",textTransform:"uppercase",letterSpacing:"0.15em"}}>Overview</p>
             <h1 style={{fontSize:28,fontWeight:300,marginBottom:16,marginTop:2}}>Dashboard</h1>
+            {/* Team Portal Link — mobile */}
+            <div style={{background:"#0e0c0a",border:"1px solid #c9a96e33",borderRadius:8,padding:"14px 16px",marginBottom:16}}>
+              <p style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#c9a96e",textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:4}}>Team Portal Link</p>
+              <p style={{fontSize:11,color:"#5a5048",fontFamily:"'DM Mono',monospace",marginBottom:10,wordBreak:"break-all"}}>{window.location.href.split("#")[0]}#{adminId==="legacy"?"team":`team-${adminId}`}</p>
+              <button onClick={()=>navigator.clipboard.writeText(window.location.href.split("#")[0]+"#"+(adminId==="legacy"?"team":`team-${adminId}`))} style={{background:"#c9a96e22",border:"1px solid #c9a96e44",color:"#c9a96e",padding:"8px 14px",borderRadius:3,fontSize:12,fontFamily:"'DM Mono',monospace",width:"100%"}}>📋 Copy Team Link</button>
+            </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
               {[{num:stats.totalMembers,label:"Members"},{num:stats.totalWeddings,label:"Weddings"},{num:stats.totalHires,label:"Hires"},{num:stats.confirmedHires,label:"Confirmed"},{num:stats.pendingHires,label:"Pending",alert:stats.pendingHires>0},{num:`₹${Math.round(stats.totalRevenue/1000)}k`,label:"Revenue"}].map((s,i)=>(
                 <div key={i} style={{background:"#0e0c0a",border:`1px solid ${s.alert?"#fbbf2444":"#1e1a16"}`,borderRadius:8,padding:"14px 14px"}}>
@@ -1322,15 +1437,19 @@ function AdminApp({ user, onLogout }) {
               <p style={{color:"#7a6f63",fontSize:14,marginBottom:4}}>{w.bride} {w.bride&&w.groom?"&":""} {w.groom}{w.clientName&&!w.bride?w.clientName:""}</p>
               {w.location&&(w.googleMapsLink?<a href={w.googleMapsLink} target="_blank" rel="noopener noreferrer" style={{display:"block",fontSize:13,color:"#60a5fa",marginBottom:16,textDecoration:"none"}}>📍 {w.location} ↗ Open in Maps</a>:<p style={{fontSize:13,color:"#5a5048",marginBottom:16}}>📍 {w.location}</p>)}
               {(w.eventDays||[]).map((ed,i)=>{
-                const crew=team.filter(m=>m.hires.some(h=>hireMatchesEvent(h,w,ed.date)));
+                const crew=team.filter(m=>m.hires.some(h=>hireMatchesEvent(h,w,ed.date,ed.event)));
                 const slots=ed.crewSlots||[];
+                const sideLabel=ed.side==="bride"?"👰 Bride":ed.side==="groom"?"🤵 Groom":"";
                 return(
                   <div key={i} style={{background:"#0e0c0a",border:"1px solid #1e1a16",borderLeft:`3px solid ${evColor(ed.event)}`,borderRadius:6,padding:"12px 14px",marginBottom:8}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                       <div>
-                        <div style={{fontSize:15,fontWeight:500,color:evColor(ed.event)}}>{ed.event}</div>
+                        <div style={{display:"flex",alignItems:"center",gap:6,flexWrap:"wrap",marginBottom:2}}>
+                          <div style={{fontSize:15,fontWeight:500,color:evColor(ed.event)}}>{ed.event}</div>
+                          {sideLabel&&<span style={{fontSize:9,fontFamily:"'DM Mono',monospace",color:"#c9a96e",background:"#c9a96e11",border:"1px solid #c9a96e33",padding:"1px 6px",borderRadius:2}}>{sideLabel}</span>}
+                        </div>
                         <div style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:"#5a5048"}}>{ed.date}{ed.startTime&&` · ⏰ ${ed.startTime}`}{ed.endTime&&`–${ed.endTime}`}</div>
-                        {/* FEATURE 8: Crew slots on wedding detail */}
+                        {ed.location&&<div style={{fontSize:11,color:"#60a5fa",fontFamily:"'DM Mono',monospace",marginTop:2}}>📍 {ed.location}</div>}
                         {slots.length>0&&<div style={{marginTop:6,display:"flex",flexWrap:"wrap",gap:4}}>
                           {slots.map(slot=>{
                             const roleInfo=CREW_SLOT_ROLES.find(r=>r.id===slot.role)||CREW_SLOT_ROLES[0];
@@ -1425,7 +1544,7 @@ function AdminApp({ user, onLogout }) {
     <div style={{minHeight:"100vh",background:"#0a0a0a",fontFamily:"'Cormorant Garamond',Georgia,serif",color:"#e8e0d4"}}>
       <style>{S}</style>
       <div style={{borderBottom:"1px solid #1e1a16",padding:"0 32px",display:"flex",alignItems:"center",justifyContent:"space-between",height:64,position:"sticky",top:0,background:"#0a0a0a",zIndex:100}}>
-        <CrewStudioBrand/>
+        <CrewStudioBrand onHome={()=>setView("dashboard")}/>
         <nav style={{display:"flex",gap:4}}>{NAV_ITEMS.map(n=><button key={n.id} className={`nav-item ${view===n.id?"active":""}`} onClick={()=>setView(n.id)}>{n.label}</button>)}</nav>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
           <span style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:"#5a5048"}}>{user.name}</span>
@@ -1650,20 +1769,23 @@ function AdminApp({ user, onLogout }) {
               :<p style={{fontSize:14,color:"#5a5048",marginBottom:20}}>📍 {w.location}</p>
             )}
             {(w.eventDays||[]).map((ed,i)=>{
-              const crew=team.filter(m=>m.hires.some(h=>hireMatchesEvent(h,w,ed.date)));
+              const crew=team.filter(m=>m.hires.some(h=>hireMatchesEvent(h,w,ed.date,ed.event)));
               const slots=ed.crewSlots||[];
               const totalSlots=slots.length;
               const filledSlots=slots.filter(s=>s.assignedMemberId).length;
+              const sideLabel=ed.side==="bride"?"👰 Bride Side":ed.side==="groom"?"🤵 Groom Side":"";
               return(
                 <div key={i} style={{background:"#0e0c0a",border:"1px solid #1e1a16",borderLeft:`3px solid ${evColor(ed.event)}`,borderRadius:4,padding:"14px 20px",marginBottom:12}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                     <div style={{flex:1}}>
-                      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4}}>
+                      <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:4,flexWrap:"wrap"}}>
                         <div style={{fontSize:15,fontWeight:500,color:evColor(ed.event)}}>{ed.event}</div>
+                        {sideLabel&&<span style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:"#c9a96e",background:"#c9a96e11",border:"1px solid #c9a96e33",padding:"2px 8px",borderRadius:2}}>{sideLabel}</span>}
                         <div style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:"#5a5048"}}>{ed.date}</div>
                         {(ed.startTime||ed.endTime)&&<div style={{fontSize:12,fontFamily:"'DM Mono',monospace",color:"#c9a96e"}}>⏰ {ed.startTime||""}{ed.endTime?`–${ed.endTime}`:""}</div>}
                         {totalSlots>0&&<span style={{fontSize:10,fontFamily:"'DM Mono',monospace",color:filledSlots===totalSlots?"#4ade80":"#fbbf24",background:filledSlots===totalSlots?"#4ade8011":"#fbbf2411",border:`1px solid ${filledSlots===totalSlots?"#4ade8033":"#fbbf2433"}`,padding:"2px 8px",borderRadius:2}}>{filledSlots}/{totalSlots} slots filled</span>}
                       </div>
+                      {ed.location&&<div style={{fontSize:12,color:"#60a5fa",fontFamily:"'DM Mono',monospace",marginBottom:8}}>📍 {ed.location}</div>}
                       {/* FEATURE 8: Crew slots visual */}
                       {slots.length>0&&(
                         <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:8}}>
@@ -1930,6 +2052,7 @@ export default function Root() {
   const isTeamView=hash.startsWith("#team");
   const hashAdminId=hash.startsWith("#team-")?hash.replace("#team-",""):"legacy";
   const [session,setSession]=useState(()=>loadState("crew_session",null));
+  const [splashDone,setSplashDone]=useState(()=>sessionStorage.getItem("crew_splash_done")==="1");
   const normalizeTeam=t=>(Array.isArray(t)?t:Object.values(t||{})).map(m=>({...m,hires:Array.isArray(m.hires)?m.hires:Object.values(m.hires||{})}));
   const teamKey=hashAdminId==="legacy"?"crew_team":`crew_team_${hashAdminId}`;
   const weddingsKey=hashAdminId==="legacy"?"crew_weddings":`crew_weddings_${hashAdminId}`;
@@ -1938,6 +2061,8 @@ export default function Root() {
   const [weddingsData,setWeddingsData]=useState(()=>loadState(weddingsKey,[]));
   const [portalReady,setPortalReady]=useState(!isTeamView||!USE_FIREBASE);
   const [profileData,setProfileData]=useState(()=>loadState(profileKey,{adminName:"Krunal Prajapati",waNumber:"919876543210",studioName:"Krunalfilms"}));
+
+  function handleSplashDone(){setSplashDone(true);sessionStorage.setItem("crew_splash_done","1");}
 
   useEffect(()=>{
     if(!isTeamView||!USE_FIREBASE)return;
@@ -1966,6 +2091,8 @@ export default function Root() {
     saveState(teamKey,nextTeam);
     if(USE_FIREBASE) await fbSet(teamKey,nextTeam);
   }
+
+  if(!splashDone) return <SplashScreen onDone={handleSplashDone}/>;
 
   if(isTeamView){
     if(!portalReady) return(
